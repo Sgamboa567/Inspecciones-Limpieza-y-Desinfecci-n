@@ -9,7 +9,8 @@ const CONFIG = {
   JOYERIAS_STORE_KEY: 'JOYERIAS_JSON',
   ADMIN_EMAILS: [
     'sgamboa765@gmail.com',
-    'deudaspresuntas.aynn@gmail.com'
+    'deudaspresuntas.aynn@gmail.com',
+    'sst@negociosnutibara.com'
   ],
   INSPECTOR_EMAILS: [
     'inspector1@tudominio.com',
