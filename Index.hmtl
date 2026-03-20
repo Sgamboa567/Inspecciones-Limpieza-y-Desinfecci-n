@@ -3,189 +3,297 @@
   <head>
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-deep: #130723;
+        --bg-mid: #1f1147;
+        --paper: #f9f2ff;
+        --ink: #140d29;
+        --violet: #8f3dff;
+        --cyan: #16e0ff;
+        --lime: #c4ff49;
+        --rose: #ff4fd8;
+        --danger: #ff5f76;
+        --ok: #3ee79a;
+        --shadow-main: 0 22px 48px rgba(7, 2, 20, 0.45);
+        --radius-xl: 24px;
+      }
+
+      * { box-sizing: border-box; }
       body {
-        font-family: Arial, sans-serif;
         margin: 0;
-        background: #f5f7fa;
-        color: #1f2937;
+        color: var(--paper);
+        font-family: 'Manrope', system-ui, sans-serif;
+        background:
+          radial-gradient(circle at 12% 10%, rgba(143, 61, 255, 0.42), transparent 36%),
+          radial-gradient(circle at 85% 15%, rgba(22, 224, 255, 0.25), transparent 30%),
+          radial-gradient(circle at 50% 100%, rgba(255, 79, 216, 0.2), transparent 35%),
+          linear-gradient(145deg, var(--bg-deep), var(--bg-mid));
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
       }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.2;
+        background-image:
+          repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 12px),
+          repeating-linear-gradient(-45deg, rgba(0,0,0,0.15) 0 1px, transparent 1px 18px);
+        mix-blend-mode: soft-light;
+      }
+
+      .shell {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 20px 14px 64px;
+      }
+
       .container {
-        max-width: 900px;
-        margin: 20px auto;
-        background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.08);
-        padding: 24px;
+        position: relative;
+        background: rgba(249, 242, 255, 0.08);
+        border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: blur(10px);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-main);
+        padding: 22px 16px 24px;
+        overflow: hidden;
       }
+
+      .container::after {
+        content: '';
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(196,255,73,0.28), transparent 72%);
+        right: -70px;
+        top: -50px;
+      }
+
       h1 {
-        margin-top: 0;
-        font-size: 26px;
+        font-family: 'Unbounded', sans-serif;
+        margin: 0;
+        line-height: 1.1;
+        font-size: clamp(1.5rem, 4.6vw, 2.2rem);
+        letter-spacing: -0.02em;
       }
+
+      .sub {
+        font-size: 0.88rem;
+        color: rgba(249,242,255,0.8);
+        margin: 8px 0 0;
+      }
+
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 16px;
+        gap: 14px;
+        margin-top: 18px;
       }
+
       .field {
-        margin-bottom: 16px;
+        background: rgba(20, 13, 41, 0.5);
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 16px;
+        padding: 12px;
+        transition: transform .35s ease, border-color .35s ease;
       }
+
+      .field:focus-within {
+        transform: translateY(-2px);
+        border-color: var(--cyan);
+      }
+
       label {
         display: block;
-        font-weight: bold;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
+        font-size: .76rem;
+        text-transform: uppercase;
+        letter-spacing: .09em;
+        font-weight: 800;
+        color: rgba(249,242,255,0.84);
       }
+
       input, select, textarea {
         width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.24);
+        border-radius: 12px;
+        padding: 11px;
+        font: inherit;
+        color: var(--paper);
+        background: rgba(5, 4, 14, 0.43);
       }
-      textarea {
-        min-height: 100px;
-        resize: vertical;
-      }
+
+      input::placeholder, textarea::placeholder { color: rgba(249,242,255,0.44); }
+      textarea { min-height: 110px; resize: vertical; }
+
+      .box,
       .checklist-item {
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(11, 8, 24, 0.56);
         padding: 12px;
-        margin-bottom: 10px;
-        background: #fafafa;
       }
-      .row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
+
+      .checklist-item { margin-bottom: 9px; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+      .chip {
+        display: inline-flex;
         align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255,255,255,0.24);
+        border-radius: 999px;
+        padding: 7px 11px;
+        font-size: .85rem;
+        background: rgba(20, 10, 40, 0.72);
       }
+
+      .chip input { width: auto; accent-color: var(--lime); }
+      .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
       .btn {
-        background: #0f172a;
-        color: white;
         border: none;
-        border-radius: 10px;
-        padding: 12px 18px;
+        border-radius: 14px;
+        padding: 12px 16px;
+        font-weight: 800;
+        letter-spacing: .02em;
+        color: var(--ink);
+        background: linear-gradient(120deg, var(--lime), #fbffbd);
+        box-shadow: 0 10px 24px rgba(196,255,73,.25);
         cursor: pointer;
-        font-size: 15px;
+        transition: transform .22s ease, filter .22s ease;
       }
-      .btn:hover {
-        opacity: 0.92;
-      }
-      .btn-secondary {
-        background: #6b7280;
-      }
+
+      .btn:hover { transform: translateY(-2px) scale(1.01); filter: saturate(1.2); }
+      .btn-secondary { background: linear-gradient(120deg, #d8d9ff, #bdb9ff); }
+
       #signatureCanvas {
-        border: 2px dashed #9ca3af;
-        border-radius: 10px;
         width: 100%;
         height: 220px;
-        touch-action: none;
-        background: white;
+        border-radius: 14px;
+        border: 2px dashed rgba(22,224,255,0.7);
+        background: linear-gradient(145deg, rgba(26, 16, 49, .95), rgba(11, 8, 24, .95));
       }
-      .preview {
-        margin-top: 10px;
-        font-size: 14px;
-        color: #374151;
-      }
+
+      .preview { margin-top: 9px; font-size: .85rem; color: rgba(249,242,255,0.85); }
+
       .status {
         margin-top: 16px;
+        border-radius: 12px;
         padding: 12px;
-        border-radius: 10px;
         display: none;
+        font-weight: 600;
       }
-      .success {
-        background: #dcfce7;
-        color: #166534;
+      .success { background: rgba(62,231,154,.18); border: 1px solid rgba(62,231,154,.4); }
+      .error { background: rgba(255,95,118,.16); border: 1px solid rgba(255,95,118,.5); }
+      .hidden { display: none; }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(22px) scale(.98);
+        animation: rise .9s cubic-bezier(.2,.76,.2,1) forwards;
+        animation-delay: var(--d, 0ms);
       }
-      .error {
-        background: #fee2e2;
-        color: #991b1b;
+
+      @keyframes rise {
+        0% { opacity: 0; transform: translateY(22px) scale(.98); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
       }
-      .small {
-        font-size: 13px;
-        color: #6b7280;
-      }
-      .footer-actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 20px;
+
+      @media (min-width: 760px) {
+        .shell { padding-top: 38px; }
+        .container { padding: 28px; }
+        .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .field:nth-child(2n) { transform: translateY(8px); }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>Inspección de Limpieza y Desinfección</h1>
-      <p class="small">Diligencia este formato mensual con checklist SST, evidencia fotográfica y firma del responsable.</p>
+    <main class="shell">
+      <div class="container reveal" style="--d:120ms">
+        <h1 class="reveal" style="--d:260ms">Inspección de Limpieza y Desinfección</h1>
+        <p class="sub reveal" style="--d:340ms">Registro móvil SST con identidad por joyería, evidencia visual y firma digital.</p>
 
-      <div class="grid">
-        <div class="field">
-          <label>Fecha de inspección</label>
-          <input type="date" id="fechaInspeccion">
+        <div class="grid reveal" style="--d:460ms">
+          <div class="field">
+            <label>Fecha de inspección</label>
+            <input type="date" id="fechaInspeccion">
+          </div>
+
+          <div class="field" id="joyeriaField">
+            <label>Joyería</label>
+            <select id="joyeria"></select>
+            <div id="joyeriaFija" class="box hidden" style="margin-top:10px"></div>
+          </div>
+
+          <div class="field">
+            <label>Correo de la joyería</label>
+            <input type="email" id="correo" readonly>
+          </div>
+
+          <div class="field">
+            <label>Responsable</label>
+            <input type="text" id="responsable" placeholder="Nombre completo" list="responsablesList">
+            <datalist id="responsablesList"></datalist>
+          </div>
         </div>
 
-        <div class="field">
-          <label>Joyería</label>
-          <select id="joyeria"></select>
+        <div class="field reveal" style="--d:580ms">
+          <label>ÁREA(S) limpiadas</label>
+          <div id="areasContainer" class="box"></div>
         </div>
 
-        <div class="field">
-          <label>Área</label>
-          <select id="area"></select>
+        <div class="field reveal" style="--d:660ms">
+          <label>Checklist SST</label>
+          <div id="checklistContainer"></div>
         </div>
 
-        <div class="field">
-          <label>Responsable</label>
-          <input type="text" id="responsable" placeholder="Nombre completo">
+        <div class="field reveal" style="--d:740ms">
+          <label>Registro fotográfico</label>
+          <input type="file" id="photos" accept="image/*" multiple capture="environment">
+          <div class="preview" id="photoPreview"></div>
         </div>
 
-        <div class="field">
-          <label>Correo</label>
-          <input type="email" id="correo" placeholder="correo@empresa.com">
+        <div class="field reveal" style="--d:820ms">
+          <label>Observaciones</label>
+          <textarea id="observaciones" placeholder="Escribe observaciones, hallazgos o novedades"></textarea>
         </div>
-      </div>
 
-      <div class="field">
-        <label>Checklist SST</label>
-        <div id="checklistContainer"></div>
-      </div>
-
-      <div class="field">
-        <label>Registro fotográfico</label>
-        <input type="file" id="photos" accept="image/*" multiple capture="environment">
-        <div class="preview" id="photoPreview"></div>
-      </div>
-
-      <div class="field">
-        <label>Observaciones</label>
-        <textarea id="observaciones" placeholder="Escribe observaciones, hallazgos o novedades"></textarea>
-      </div>
-
-      <div class="field">
-        <label>Firma del responsable</label>
-        <canvas id="signatureCanvas"></canvas>
-        <div class="footer-actions">
-          <button class="btn btn-secondary" type="button" onclick="clearSignature()">Limpiar firma</button>
+        <div class="field reveal" style="--d:900ms">
+          <label>Firma del responsable</label>
+          <canvas id="signatureCanvas"></canvas>
+          <div class="btn-row">
+            <button class="btn btn-secondary" type="button" onclick="clearSignature()">Limpiar firma</button>
+          </div>
         </div>
-      </div>
 
-      <div class="footer-actions">
-        <button class="btn" type="button" onclick="submitForm()">Guardar inspección</button>
-      </div>
+        <div class="btn-row reveal" style="--d:980ms">
+          <button class="btn" type="button" onclick="submitForm()">Guardar inspección</button>
+        </div>
 
-      <div id="statusBox" class="status"></div>
-    </div>
+        <div id="statusBox" class="status"></div>
+      </div>
+    </main>
 
     <script>
       const APP_DATA = <?!= JSON.stringify(data) ?>;
       let signatureCanvas, ctx, drawing = false;
 
       document.addEventListener('DOMContentLoaded', () => {
-        loadSelectOptions();
-        loadChecklist();
         setToday();
+        loadJoyeriaOptions();
+        loadAreas();
+        loadChecklist();
         setupSignatureCanvas();
         setupPhotoPreview();
+        applySelectedJoyeria();
       });
 
       function setToday() {
@@ -193,15 +301,54 @@
         document.getElementById('fechaInspeccion').value = today;
       }
 
-      function loadSelectOptions() {
+      function loadJoyeriaOptions() {
         const joyeria = document.getElementById('joyeria');
-        const area = document.getElementById('area');
-
         joyeria.innerHTML = '<option value="">Selecciona una joyería</option>' +
-          APP_DATA.joyerias.map(j => `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('');
+          APP_DATA.joyerias.map(j => `<option value="${escapeHtml(j.id)}">${escapeHtml(j.nombre)}</option>`).join('');
 
-        area.innerHTML = '<option value="">Selecciona un área</option>' +
-          APP_DATA.areas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+        joyeria.addEventListener('change', () => {
+          syncJoyeriaEmail();
+          loadResponsables();
+        });
+      }
+
+      function applySelectedJoyeria() {
+        if (APP_DATA.selectedJoyeriaId) {
+          document.getElementById('joyeria').value = APP_DATA.selectedJoyeriaId;
+          document.getElementById('joyeria').setAttribute('disabled', 'disabled');
+          document.getElementById('joyeriaFija').classList.remove('hidden');
+          document.getElementById('joyeriaFija').textContent = APP_DATA.selectedJoyeriaName;
+        }
+        syncJoyeriaEmail();
+        loadResponsables();
+      }
+
+      function syncJoyeriaEmail() {
+        const id = document.getElementById('joyeria').value;
+        const selected = APP_DATA.joyerias.find(j => j.id === id);
+        document.getElementById('correo').value = selected ? selected.correo : '';
+      }
+
+      function loadResponsables() {
+        const id = document.getElementById('joyeria').value;
+        const list = document.getElementById('responsablesList');
+        list.innerHTML = '';
+        if (!id) return;
+
+        google.script.run.withSuccessHandler(names => {
+          (names || []).forEach(n => {
+            const option = document.createElement('option');
+            option.value = n;
+            list.appendChild(option);
+          });
+        }).getResponsablesByJoyeria(id);
+      }
+
+      function loadAreas() {
+        const container = document.getElementById('areasContainer');
+        container.innerHTML = APP_DATA.areas.map(a => `
+          <label class="chip"><input type="checkbox" name="areaItem" value="${escapeHtml(a)}"> ${escapeHtml(a)}</label>
+        `).join('');
       }
 
       function loadChecklist() {
@@ -210,9 +357,9 @@
           <div class="checklist-item">
             <div><b>${index + 1}. ${escapeHtml(item)}</b></div>
             <div class="row" style="margin-top:8px;">
-              <label><input type="radio" name="check_${index}" value="Cumple"> Cumple</label>
-              <label><input type="radio" name="check_${index}" value="No cumple"> No cumple</label>
-              <label><input type="radio" name="check_${index}" value="No aplica"> No aplica</label>
+              <label class="chip"><input type="radio" name="check_${index}" value="Cumple"> Cumple</label>
+              <label class="chip"><input type="radio" name="check_${index}" value="No cumple"> No cumple</label>
+              <label class="chip"><input type="radio" name="check_${index}" value="No aplica"> No aplica</label>
             </div>
           </div>
         `).join('');
@@ -233,7 +380,6 @@
         ctx = signatureCanvas.getContext('2d');
 
         resizeCanvas();
-
         window.addEventListener('resize', resizeCanvas);
 
         signatureCanvas.addEventListener('mousedown', startDraw);
@@ -255,15 +401,12 @@
         ctx.scale(ratio, ratio);
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = '#111827';
+        ctx.strokeStyle = '#f9f2ff';
       }
 
       function getCoords(e) {
         const rect = signatureCanvas.getBoundingClientRect();
-        return {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        };
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
       }
 
       function startDraw(e) {
@@ -280,52 +423,26 @@
         ctx.stroke();
       }
 
-      function stopDraw() {
-        drawing = false;
-      }
-
-      function startDrawTouch(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        startDraw(touch);
-      }
-
-      function drawTouch(e) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        draw(touch);
-      }
-
-      function clearSignature() {
-        ctx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
-      }
-
-      function getSignatureBase64() {
-        return signatureCanvas.toDataURL('image/png');
-      }
+      function stopDraw() { drawing = false; }
+      function startDrawTouch(e) { e.preventDefault(); startDraw(e.touches[0]); }
+      function drawTouch(e) { e.preventDefault(); draw(e.touches[0]); }
+      function clearSignature() { ctx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height); }
+      function getSignatureBase64() { return signatureCanvas.toDataURL('image/png'); }
 
       function collectChecklist() {
         return APP_DATA.checklist.map((item, index) => {
           const selected = document.querySelector(`input[name="check_${index}"]:checked`);
-          return {
-            item,
-            estado: selected ? selected.value : ''
-          };
+          return { item, estado: selected ? selected.value : '' };
         });
       }
 
-      function validateChecklist(checklist) {
-        return checklist.every(item => item.estado);
-      }
+      function validateChecklist(checklist) { return checklist.every(item => item.estado); }
+      function collectAreas() { return Array.from(document.querySelectorAll('input[name="areaItem"]:checked')).map(el => el.value); }
 
       function fileToBase64(file) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = e => resolve({
-            fileName: file.name,
-            mimeType: file.type,
-            base64: e.target.result
-          });
+          reader.onload = e => resolve({ fileName: file.name, mimeType: file.type, base64: e.target.result });
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
@@ -334,14 +451,13 @@
       async function getPhotosBase64() {
         const files = Array.from(document.getElementById('photos').files || []);
         const results = [];
-        for (const file of files) {
-          results.push(await fileToBase64(file));
-        }
+        for (const file of files) results.push(await fileToBase64(file));
         return results;
       }
 
       async function submitForm() {
         const checklist = collectChecklist();
+        const areas = collectAreas();
 
         if (!validateChecklist(checklist)) {
           showStatus('Debes responder todos los puntos del checklist.', false);
@@ -350,18 +466,17 @@
 
         const payload = {
           fechaInspeccion: document.getElementById('fechaInspeccion').value,
-          joyeria: document.getElementById('joyeria').value,
-          area: document.getElementById('area').value,
+          joyeriaId: document.getElementById('joyeria').value,
           responsable: document.getElementById('responsable').value.trim(),
-          correo: document.getElementById('correo').value.trim(),
           observaciones: document.getElementById('observaciones').value.trim(),
-          checklist: checklist,
+          checklist,
+          areas,
           signatureBase64: getSignatureBase64(),
           registradoPor: document.getElementById('correo').value.trim()
         };
 
-        if (!payload.fechaInspeccion || !payload.joyeria || !payload.area || !payload.responsable || !payload.correo) {
-          showStatus('Completa todos los campos obligatorios.', false);
+        if (!payload.fechaInspeccion || !payload.joyeriaId || !payload.responsable || !payload.areas.length) {
+          showStatus('Completa todos los campos obligatorios y selecciona al menos un ÁREA.', false);
           return;
         }
 
@@ -382,30 +497,27 @@
               showStatus(error.message || 'Ocurrió un error inesperado.', false);
             })
             .saveInspection(payload);
-
         } catch (err) {
           showStatus('No fue posible procesar las imágenes.', false);
         }
       }
 
       function resetForm() {
+        document.getElementById('responsable').value = '';
         document.getElementById('observaciones').value = '';
         document.getElementById('photos').value = '';
         document.getElementById('photoPreview').innerHTML = '';
         clearSignature();
         setToday();
-
-        APP_DATA.checklist.forEach((_, index) => {
-          const radios = document.querySelectorAll(`input[name="check_${index}"]`);
-          radios.forEach(r => r.checked = false);
-        });
+        document.querySelectorAll('input[name="areaItem"]').forEach(i => i.checked = false);
+        APP_DATA.checklist.forEach((_, i) => document.querySelectorAll(`input[name="check_${i}"]`).forEach(r => r.checked = false));
       }
 
-      function showStatus(message, success, loading = false) {
+      function showStatus(message, success) {
         const box = document.getElementById('statusBox');
         box.style.display = 'block';
         box.className = 'status ' + (success ? 'success' : 'error');
-        box.innerHTML = loading ? `${message}` : `${message}`;
+        box.textContent = message;
       }
 
       function escapeHtml(text) {
