@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #f5f7fa;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 900px;
+        margin: 20px auto;
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+        padding: 24px;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 26px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .field {
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 6px;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+      textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+      .checklist-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #fafafa;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .btn {
+        background: #0f172a;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 18px;
+        cursor: pointer;
+        font-size: 15px;
+      }
+      .btn:hover {
+        opacity: 0.92;
+      }
+      .btn-secondary {
+        background: #6b7280;
+      }
+      #signatureCanvas {
+        border: 2px dashed #9ca3af;
+        border-radius: 10px;
+        width: 100%;
+        height: 220px;
+        touch-action: none;
+        background: white;
+      }
+      .preview {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #374151;
+      }
+      .status {
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 10px;
+        display: none;
+      }
+      .success {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .small {
+        font-size: 13px;
+        color: #6b7280;
+      }
+      .footer-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Inspección de Limpieza y Desinfección</h1>
+      <p class="small">Diligencia este formato mensual con checklist SST, evidencia fotográfica y firma del responsable.</p>
+
+      <div class="grid">
+        <div class="field">
+          <label>Fecha de inspección</label>
+          <input type="date" id="fechaInspeccion">
+        </div>
+
+        <div class="field">
+          <label>Joyería</label>
+          <select id="joyeria"></select>
+        </div>
+
+        <div class="field">
+          <label>Área</label>
+          <select id="area"></select>
+        </div>
+
+        <div class="field">
+          <label>Responsable</label>
+          <input type="text" id="responsable" placeholder="Nombre completo">
+        </div>
+
+        <div class="field">
+          <label>Correo</label>
+          <input type="email" id="correo" placeholder="correo@empresa.com">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Checklist SST</label>
+        <div id="checklistContainer"></div>
+      </div>
+
+      <div class="field">
+        <label>Registro fotográfico</label>
+        <input type="file" id="photos" accept="image/*" multiple capture="environment">
+        <div class="preview" id="photoPreview"></div>
+      </div>
+
+      <div class="field">
+        <label>Observaciones</label>
+        <textarea id="observaciones" placeholder="Escribe observaciones, hallazgos o novedades"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Firma del responsable</label>
+        <canvas id="signatureCanvas"></canvas>
+        <div class="footer-actions">
+          <button class="btn btn-secondary" type="button" onclick="clearSignature()">Limpiar firma</button>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <button class="btn" type="button" onclick="submitForm()">Guardar inspección</button>
+      </div>
+
+      <div id="statusBox" class="status"></div>
+    </div>
+
+    <script>
+      const APP_DATA = <?!= JSON.stringify(data) ?>;
+      let signatureCanvas, ctx, drawing = false;
+
+      document.addEventListener('DOMContentLoaded', () => {
+        loadSelectOptions();
+        loadChecklist();
+        setToday();
+        setupSignatureCanvas();
+        setupPhotoPreview();
+      });
+
+      function setToday() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('fechaInspeccion').value = today;
+      }
+
+      function loadSelectOptions() {
+        const joyeria = document.getElementById('joyeria');
+        const area = document.getElementById('area');
+
+        joyeria.innerHTML = '<option value="">Selecciona una joyería</option>' +
+          APP_DATA.joyerias.map(j => `<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('');
+
+        area.innerHTML = '<option value="">Selecciona un área</option>' +
+          APP_DATA.areas.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+      }
+
+      function loadChecklist() {
+        const container = document.getElementById('checklistContainer');
+        container.innerHTML = APP_DATA.checklist.map((item, index) => `
+          <div class="checklist-item">
+            <div><b>${index + 1}. ${escapeHtml(item)}</b></div>
+            <div class="row" style="margin-top:8px;">
+              <label><input type="radio" name="check_${index}" value="Cumple"> Cumple</label>
+              <label><input type="radio" name="check_${index}" value="No cumple"> No cumple</label>
+              <label><input type="radio" name="check_${index}" value="No aplica"> No aplica</label>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function setupPhotoPreview() {
+        document.getElementById('photos').addEventListener('change', function() {
+          const files = Array.from(this.files || []);
+          const preview = document.getElementById('photoPreview');
+          preview.innerHTML = files.length
+            ? `${files.length} archivo(s) seleccionado(s):<br>${files.map(f => '• ' + f.name).join('<br>')}`
+            : '';
+        });
+      }
+
+      function setupSignatureCanvas() {
+        signatureCanvas = document.getElementById('signatureCanvas');
+        ctx = signatureCanvas.getContext('2d');
+
+        resizeCanvas();
+
+        window.addEventListener('resize', resizeCanvas);
+
+        signatureCanvas.addEventListener('mousedown', startDraw);
+        signatureCanvas.addEventListener('mousemove', draw);
+        signatureCanvas.addEventListener('mouseup', stopDraw);
+        signatureCanvas.addEventListener('mouseleave', stopDraw);
+
+        signatureCanvas.addEventListener('touchstart', startDrawTouch, { passive: false });
+        signatureCanvas.addEventListener('touchmove', drawTouch, { passive: false });
+        signatureCanvas.addEventListener('touchend', stopDraw);
+      }
+
+      function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        const rect = signatureCanvas.getBoundingClientRect();
+        signatureCanvas.width = rect.width * ratio;
+        signatureCanvas.height = 220 * ratio;
+        ctx = signatureCanvas.getContext('2d');
+        ctx.scale(ratio, ratio);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#111827';
+      }
+
+      function getCoords(e) {
+        const rect = signatureCanvas.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+
+      function startDraw(e) {
+        drawing = true;
+        const pos = getCoords(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      function draw(e) {
+        if (!drawing) return;
+        const pos = getCoords(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      }
+
+      function stopDraw() {
+        drawing = false;
+      }
+
+      function startDrawTouch(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        startDraw(touch);
+      }
+
+      function drawTouch(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        draw(touch);
+      }
+
+      function clearSignature() {
+        ctx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+      }
+
+      function getSignatureBase64() {
+        return signatureCanvas.toDataURL('image/png');
+      }
+
+      function collectChecklist() {
+        return APP_DATA.checklist.map((item, index) => {
+          const selected = document.querySelector(`input[name="check_${index}"]:checked`);
+          return {
+            item,
+            estado: selected ? selected.value : ''
+          };
+        });
+      }
+
+      function validateChecklist(checklist) {
+        return checklist.every(item => item.estado);
+      }
+
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve({
+            fileName: file.name,
+            mimeType: file.type,
+            base64: e.target.result
+          });
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function getPhotosBase64() {
+        const files = Array.from(document.getElementById('photos').files || []);
+        const results = [];
+        for (const file of files) {
+          results.push(await fileToBase64(file));
+        }
+        return results;
+      }
+
+      async function submitForm() {
+        const checklist = collectChecklist();
+
+        if (!validateChecklist(checklist)) {
+          showStatus('Debes responder todos los puntos del checklist.', false);
+          return;
+        }
+
+        const payload = {
+          fechaInspeccion: document.getElementById('fechaInspeccion').value,
+          joyeria: document.getElementById('joyeria').value,
+          area: document.getElementById('area').value,
+          responsable: document.getElementById('responsable').value.trim(),
+          correo: document.getElementById('correo').value.trim(),
+          observaciones: document.getElementById('observaciones').value.trim(),
+          checklist: checklist,
+          signatureBase64: getSignatureBase64(),
+          registradoPor: document.getElementById('correo').value.trim()
+        };
+
+        if (!payload.fechaInspeccion || !payload.joyeria || !payload.area || !payload.responsable || !payload.correo) {
+          showStatus('Completa todos los campos obligatorios.', false);
+          return;
+        }
+
+        try {
+          showStatus('Guardando información...', true, true);
+          payload.photos = await getPhotosBase64();
+
+          google.script.run
+            .withSuccessHandler(response => {
+              if (response.ok) {
+                showStatus(response.message, true);
+                resetForm();
+              } else {
+                showStatus(response.message, false);
+              }
+            })
+            .withFailureHandler(error => {
+              showStatus(error.message || 'Ocurrió un error inesperado.', false);
+            })
+            .saveInspection(payload);
+
+        } catch (err) {
+          showStatus('No fue posible procesar las imágenes.', false);
+        }
+      }
+
+      function resetForm() {
+        document.getElementById('observaciones').value = '';
+        document.getElementById('photos').value = '';
+        document.getElementById('photoPreview').innerHTML = '';
+        clearSignature();
+        setToday();
+
+        APP_DATA.checklist.forEach((_, index) => {
+          const radios = document.querySelectorAll(`input[name="check_${index}"]`);
+          radios.forEach(r => r.checked = false);
+        });
+      }
+
+      function showStatus(message, success, loading = false) {
+        const box = document.getElementById('statusBox');
+        box.style.display = 'block';
+        box.className = 'status ' + (success ? 'success' : 'error');
+        box.innerHTML = loading ? `${message}` : `${message}`;
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    </script>
+  </body>
+</html>
