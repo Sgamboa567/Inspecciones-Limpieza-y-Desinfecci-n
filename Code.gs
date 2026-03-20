@@ -88,6 +88,7 @@ function doGet(e) {
       joyerias: getJoyerias_(),
       webAppUrl: ScriptApp.getService().getUrl() || '',
       logoUrl: CONFIG.BRAND_LOGO_URL
+      webAppUrl: ScriptApp.getService().getUrl() || ''
     };
     return template.evaluate().setTitle('Panel Admin SST');
   }
@@ -104,6 +105,7 @@ function doGet(e) {
     selectedJoyeriaName: joyeria ? joyeria.nombre : '',
     selectedJoyeriaEmail: joyeria ? joyeria.correo : '',
     logoUrl: CONFIG.BRAND_LOGO_URL
+    selectedJoyeriaEmail: joyeria ? joyeria.correo : ''
   };
   return template.evaluate().setTitle('Formato Limpieza y Desinfección');
 }
@@ -164,6 +166,7 @@ function getJoyerias_() {
   } catch (err) {
     return CONFIG.JOYERIAS;
   }
+  return CONFIG.JOYERIAS.find(j => j.id === id) || null;
 }
 
 function getResponsablesByJoyeria(joyeriaId) {
@@ -277,6 +280,7 @@ function getDashboardData_(filter) {
   const zone = (filter && filter.zone) || '';
   const month = (filter && filter.month) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM');
   const joyerias = getJoyerias_();
+  const date = (filter && filter.date) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
@@ -287,6 +291,11 @@ function getDashboardData_(filter) {
   joyeriasFiltradas.forEach(j => joyeriasMap[j.id] = j);
 
   const byDate = rows.filter(r => String(r[1] || '').startsWith(month) && joyeriasMap[r[2]]);
+  const joyeriasFiltradas = CONFIG.JOYERIAS.filter(j => !zone || j.zona === zone);
+  const joyeriasMap = {};
+  joyeriasFiltradas.forEach(j => joyeriasMap[j.id] = j);
+
+  const byDate = rows.filter(r => String(r[1] || '') === date && joyeriasMap[r[2]]);
   const registradasSet = {};
   byDate.forEach(r => { registradasSet[r[2]] = true; });
 
@@ -313,6 +322,9 @@ function getDashboardData_(filter) {
     month,
     zone,
     zones: [...new Set(joyerias.map(j => j.zona))],
+    date,
+    zone,
+    zones: [...new Set(CONFIG.JOYERIAS.map(j => j.zona))],
     total,
     registradas,
     pendientes,
@@ -323,6 +335,7 @@ function getDashboardData_(filter) {
 function getQrCatalog_() {
   const webAppUrl = ScriptApp.getService().getUrl() || '';
   return getJoyerias_().map(j => {
+  return CONFIG.JOYERIAS.map(j => {
     const formUrl = `${webAppUrl}?s=${encodeURIComponent(j.id)}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(formUrl)}`;
     const waMessage = encodeURIComponent(`Hola ${j.nombre}, este es su enlace de inspección de limpieza y desinfección: ${formUrl}`);
