@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root { --bg:#f5f5f5; --card:#fff; --text:#121212; --muted:#606060; --line:#d9d9d9; --black:#131313; }
+      *{box-sizing:border-box}
+      body{margin:0;font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text)}
+      .wrap{max-width:1100px;margin:0 auto;padding:14px}
+      .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+      .brand img{max-width:240px;width:58vw;height:auto;object-fit:contain}
+      h1,h2{margin:0 0 8px}.small{font-size:.86rem;color:var(--muted)}
+      .grid{display:grid;gap:10px}
+      label{display:block;font-size:.88rem;font-weight:600;margin-bottom:6px}
+      input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+      .btn{border:none;background:var(--black);color:#fff;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer}
+      .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      .kpi{border:1px solid var(--line);border-radius:10px;padding:10px}
+      .kpi b{font-size:.8rem;color:var(--muted)} .kpi div{font-size:1.3rem;font-weight:700;margin-top:3px}
+      table{width:100%;border-collapse:collapse}.th, th{font-size:.78rem;text-transform:uppercase;color:var(--muted)} th,td{border-bottom:1px solid var(--line);text-align:left;padding:8px;font-size:.88rem}
+      .bar{height:10px;background:#ececec;border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:#1f1f1f}
+      .thumb{width:62px;height:62px;border:1px solid var(--line);border-radius:8px}
+      .status{padding:10px;border-radius:8px;margin-top:8px;display:none}.ok{display:block;background:#eaf7ea;color:#1a6d1a;border:1px solid #a8d4a8}.err{display:block;background:#fbecec;color:#a32c2c;border:1px solid #e3b0b0}
+      .btn-ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+      .icon-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+      .editor-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+      .editor-grid .full{grid-column:1/-1}
+      .muted{color:var(--muted)}
+      @media (min-width:780px){.grid{grid-template-columns:1fr 1fr auto;align-items:end}}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card brand">
+        <img src="<?= data.logoUrl ?>" alt="Logo OROEXPRESS" onerror="this.style.display='none'">
+        <h1>Panel Admin SST</h1>
+        <p class="small">Control de registros diarios, cumplimiento y distribución de enlaces QR.</p>
+      </div>
+
+      <div class="card">
+        <h2>Filtros de dashboard</h2>
+        <div class="grid">
+          <div><label>Mes</label><input type="month" id="fltMonth"></div>
+          <div><label>Zona</label><select id="fltZone"></select></div>
+          <div><button class="btn" onclick="reloadDashboard()">Actualizar dashboard</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>KPIs</h2>
+        <div class="kpi-grid">
+          <div class="kpi"><b>Total joyerías</b><div id="kpiTotal"></div></div>
+          <div class="kpi"><b>Registradas</b><div id="kpiReg"></div></div>
+          <div class="kpi"><b>Pendientes</b><div id="kpiPen"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Cumplimiento por joyería</h2>
+        <div id="complianceTable"></div>
+      </div>
+
+      <div class="card">
+        <h2>Distribución y envío de QR</h2>
+        <button class="btn" onclick="sendMassive()">Enviar QR masivo por correo</button>
+        <div id="sendStatus" class="status"></div>
+        <table style="margin-top:10px;">
+          <thead><tr><th>Joyería</th><th>Zona</th><th>QR</th><th>Enlace</th><th>WhatsApp</th></tr></thead>
+          <tbody id="qrRows"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Gestión de joyerías</h2>
+        <p class="small">Busca por nombre/código y usa el botón de lápiz para editar datos de la joyería.</p>
+        <div class="grid">
+          <div><label>Buscar</label><input id="storeSearch" placeholder="Ej: 195, Medellín, apoderado..."></div>
+          <div><label>Zona</label><select id="storeZone"><option value="">Todas</option></select></div>
+          <div><label>Ciudad</label><select id="storeCity"><option value="">Todas</option></select></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="loadStores()">Filtrar</button>
+          <button class="btn btn-ghost" onclick="clearStoreFilters()">Limpiar filtros</button>
+          <span class="small muted" id="storeCount"></span>
+        </div>
+        <table style="margin-top:10px;">
+          <thead><tr><th>Joyería</th><th>Zona</th><th>Ciudad</th><th>Apoderado</th><th>Acción</th></tr></thead>
+          <tbody id="storeRows"></tbody>
+        </table>
+        <div id="storeStatus" class="status"></div>
+      </div>
+
+      <div class="card" id="editCard" style="display:none">
+        <h2>Editar joyería</h2>
+        <div class="editor-grid">
+          <div><label>ID</label><input id="edId" disabled></div>
+          <div><label>Nombre</label><input id="edNombre"></div>
+          <div><label>Correo</label><input id="edCorreo"></div>
+          <div><label>WhatsApp</label><input id="edWhatsapp"></div>
+          <div><label>Apoderado</label><input id="edApoderado"></div>
+          <div><label>Sociedad</label><input id="edSociedad"></div>
+          <div><label>Departamento</label><input id="edDepartamento"></div>
+          <div><label>Ciudad</label><input id="edCiudad"></div>
+          <div class="full"><label>Zona</label><input id="edZona"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn" onclick="saveStoreEdit()">Guardar cambios</button>
+          <button class="btn btn-ghost" onclick="cancelEdit()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const ADMIN_DATA = <?!= JSON.stringify(data) ?>;
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px">No autorizado para ver este panel.</div>'; return; }
+        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); loadStores();
+      });
+      function initFilters() {
+        document.getElementById('fltMonth').value = ADMIN_DATA.dashboard.month;
+        document.getElementById('fltZone').innerHTML = '<option value="">Todas las zonas</option>' + (ADMIN_DATA.dashboard.zones || []).map(z => `<option value="${esc(z)}">${esc(z)}</option>`).join('');
+      }
+      function reloadDashboard() {
+        const filter = { month: document.getElementById('fltMonth').value, zone: document.getElementById('fltZone').value };
+        google.script.run.withSuccessHandler(paintDashboard).getDashboardData(filter);
+      }
+      function paintDashboard(data) {
+        document.getElementById('kpiTotal').textContent = data.total;
+        document.getElementById('kpiReg').textContent = data.registradas;
+        document.getElementById('kpiPen').textContent = data.pendientes;
+        const rows = (data.complianceByJoyeria || []).map(item => `<tr><td>${esc(item.joyeria)}</td><td>${esc(item.zona)}</td><td><div class="bar"><span style="width:${item.cumplimiento}%"></span></div><div class="small">${item.cumplimiento}% (${item.registros} registro/s)</div></td></tr>`).join('');
+        document.getElementById('complianceTable').innerHTML = `<table><thead><tr><th>Joyería</th><th>Zona</th><th>Cumplimiento</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Sin datos para el filtro seleccionado.</td></tr>'}</tbody></table>`;
+      }
+      function paintQrTable(list) {
+        document.getElementById('qrRows').innerHTML = list.map(item => `<tr><td>${esc(item.nombre)}<br><span class="small">${esc(item.correo || '')}</span></td><td>${esc(item.zona || '')}</td><td><img class="thumb" src="${item.qrUrl}" alt="QR ${esc(item.nombre)}"></td><td><a href="${item.formUrl}" target="_blank">Abrir enlace</a></td><td>${item.whatsappUrl ? `<a href="${item.whatsappUrl}" target="_blank">Enviar por WhatsApp</a>` : '<span class="small">Sin número</span>'}</td></tr>`).join('');
+      }
+      function sendMassive() {
+        const status = document.getElementById('sendStatus'); status.className = 'status'; status.style.display = 'block'; status.textContent = 'Enviando correos...';
+        google.script.run.withSuccessHandler(res => { status.className = 'status ok'; status.textContent = `Envío completado. Correos enviados: ${res.sent}`; }).withFailureHandler(err => { status.className = 'status err'; status.textContent = err.message || 'Error durante envío masivo.'; }).sendMassiveQrEmails();
+      }
+      let currentStore = null;
+      document.getElementById('storeSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadStores(); });
+
+      function loadStores() {
+        const filter = {
+          q: document.getElementById('storeSearch').value,
+          zone: document.getElementById('storeZone').value,
+          city: document.getElementById('storeCity').value
+        };
+        google.script.run
+          .withSuccessHandler(paintStores)
+          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo cargar el listado.', true))
+          .getJoyeriasAdminData(filter);
+      }
+
+      function paintStores(data) {
+        const rows = data.rows || [];
+        document.getElementById('storeRows').innerHTML = rows.map(item => `
+          <tr>
+            <td><b>${esc(item.nombre)}</b><br><span class="small">${esc(item.id)}</span></td>
+            <td>${esc(item.zona || '')}</td>
+            <td>${esc(item.ciudad || '')}</td>
+            <td>${esc(item.apoderado || '')}</td>
+            <td><button class="icon-btn" onclick="openEdit('${encodeURIComponent(item.id || '')}')" title="Editar">✏️</button></td>
+          </tr>
+        `).join('');
+
+        document.getElementById('storeCount').textContent = `${rows.length} joyerías encontradas`;
+
+        const zoneEl = document.getElementById('storeZone');
+        const cityEl = document.getElementById('storeCity');
+        if (zoneEl.options.length <= 1) zoneEl.innerHTML = '<option value="">Todas</option>' + (data.zones || []).map(z => `<option value="${esc(z)}">${esc(z)}</option>`).join('');
+        if (cityEl.options.length <= 1) cityEl.innerHTML = '<option value="">Todas</option>' + (data.cities || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      }
+
+      function openEdit(encodedId) {
+        const id = decodeURIComponent(encodedId || '');
+        google.script.run.withSuccessHandler(data => {
+          const item = (data.rows || []).find(r => r.id === id);
+          if (!item) return;
+          currentStore = item;
+          document.getElementById('editCard').style.display = 'block';
+          document.getElementById('edId').value = item.id || '';
+          document.getElementById('edNombre').value = item.nombre || '';
+          document.getElementById('edCorreo').value = item.correo || '';
+          document.getElementById('edWhatsapp').value = item.whatsapp || '';
+          document.getElementById('edApoderado').value = item.apoderado || '';
+          document.getElementById('edSociedad').value = item.sociedad_nombre || '';
+          document.getElementById('edDepartamento').value = item.departamento || '';
+          document.getElementById('edCiudad').value = item.ciudad || '';
+          document.getElementById('edZona').value = item.zona || '';
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }).getJoyeriasAdminData({ q: id });
+      }
+
+      function saveStoreEdit() {
+        if (!currentStore) return;
+        const payload = {
+          id: document.getElementById('edId').value,
+          nombre: document.getElementById('edNombre').value,
+          correo: document.getElementById('edCorreo').value,
+          whatsapp: document.getElementById('edWhatsapp').value,
+          apoderado: document.getElementById('edApoderado').value,
+          sociedad_nombre: document.getElementById('edSociedad').value,
+          departamento: document.getElementById('edDepartamento').value,
+          ciudad: document.getElementById('edCiudad').value,
+          zona: document.getElementById('edZona').value
+        };
+        google.script.run
+          .withSuccessHandler(() => {
+            showStoreStatus('Joyería actualizada correctamente.', false);
+            cancelEdit();
+            loadStores();
+            reloadDashboard();
+          })
+          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo guardar.', true))
+          .updateJoyeria(payload);
+      }
+
+      function cancelEdit() {
+        currentStore = null;
+        document.getElementById('editCard').style.display = 'none';
+      }
+
+      function clearStoreFilters() {
+        document.getElementById('storeSearch').value = '';
+        document.getElementById('storeZone').value = '';
+        document.getElementById('storeCity').value = '';
+        loadStores();
+      }
+
+      function showStoreStatus(message, isError) {
+        const status = document.getElementById('storeStatus');
+        status.className = 'status ' + (isError ? 'err' : 'ok');
+        status.textContent = message;
+      }
+
+      function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+    </script>
+  </body>
+</html>
