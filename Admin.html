@@ -27,6 +27,11 @@
       .editor-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
       .editor-grid .full{grid-column:1/-1}
       .muted{color:var(--muted)}
+      .tabs{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
+      .tab-btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;font-weight:600}
+      .tab-btn.active{background:var(--black);color:#fff;border-color:var(--black)}
+      .admin-section{display:none}
+      .admin-section.active{display:block}
       @media (min-width:780px){.grid{grid-template-columns:1fr 1fr auto;align-items:end}}
     </style>
   </head>
@@ -57,11 +62,20 @@
       </div>
 
       <div class="card">
+        <h2>Accesos rápidos</h2>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="compliance" onclick="showSection('compliance')">Cumplimiento</button>
+          <button class="tab-btn" data-tab="qr" onclick="showSection('qr')">QR y envíos</button>
+          <button class="tab-btn" data-tab="stores" onclick="showSection('stores')">Joyerías</button>
+        </div>
+      </div>
+
+      <div class="card admin-section active" id="section-compliance">
         <h2>Cumplimiento por joyería</h2>
         <div id="complianceTable"></div>
       </div>
 
-      <div class="card">
+      <div class="card admin-section" id="section-qr">
         <h2>Distribución y envío de QR</h2>
         <button class="btn" onclick="sendMassive()">Enviar QR masivo por correo</button>
         <div id="sendStatus" class="status"></div>
@@ -71,7 +85,7 @@
         </table>
       </div>
 
-      <div class="card">
+      <div class="card admin-section" id="section-stores">
         <h2>Gestión de joyerías</h2>
         <p class="small">Busca por nombre/código y usa el botón de lápiz para editar datos de la joyería.</p>
         <div class="grid">
@@ -91,7 +105,7 @@
         <div id="storeStatus" class="status"></div>
       </div>
 
-      <div class="card" id="editCard" style="display:none">
+      <div class="card admin-section" id="editCard" style="display:none">
         <h2>Editar joyería</h2>
         <div class="editor-grid">
           <div><label>ID</label><input id="edId" disabled></div>
@@ -115,7 +129,7 @@
       const ADMIN_DATA = <?!= JSON.stringify(data) ?>;
       document.addEventListener('DOMContentLoaded', () => {
         if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px">No autorizado para ver este panel.</div>'; return; }
-        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); loadStores();
+        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); initTabs(); loadStores();
       });
       function initFilters() {
         document.getElementById('fltMonth').value = ADMIN_DATA.dashboard.month;
@@ -139,6 +153,27 @@
         const status = document.getElementById('sendStatus'); status.className = 'status'; status.style.display = 'block'; status.textContent = 'Enviando correos...';
         google.script.run.withSuccessHandler(res => { status.className = 'status ok'; status.textContent = `Envío completado. Correos enviados: ${res.sent}`; }).withFailureHandler(err => { status.className = 'status err'; status.textContent = err.message || 'Error durante envío masivo.'; }).sendMassiveQrEmails();
       }
+      function initTabs() {
+        showSection('compliance');
+      }
+
+      function showSection(section) {
+        const valid = ['compliance', 'qr', 'stores'];
+        const selected = valid.includes(section) ? section : 'compliance';
+
+        document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
+        const target = document.getElementById(`section-${selected}`);
+        if (target) target.classList.add('active');
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === selected);
+        });
+
+        if (selected !== 'stores') {
+          cancelEdit();
+        }
+      }
+
       let currentStore = null;
       document.getElementById('storeSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadStores(); });
 
@@ -175,6 +210,7 @@
       }
 
       function openEdit(encodedId) {
+        showSection('stores');
         const id = decodeURIComponent(encodedId || '');
         google.script.run.withSuccessHandler(data => {
           const item = (data.rows || []).find(r => r.id === id);
