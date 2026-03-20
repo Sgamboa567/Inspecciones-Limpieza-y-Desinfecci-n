@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Unbounded:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg:#0b0620;
+        --bg2:#1d0f44;
+        --card:rgba(252,245,255,.08);
+        --stroke:rgba(255,255,255,.18);
+        --txt:#f8f3ff;
+        --muted:rgba(248,243,255,.72);
+        --aqua:#22e8ff;
+        --vio:#9f5eff;
+        --sun:#d0ff3e;
+        --ok:#3ee79a;
+        --err:#ff5f76;
+      }
+
+      *{box-sizing:border-box}
+      body{
+        margin:0;
+        font-family:'Manrope',system-ui,sans-serif;
+        color:var(--txt);
+        background:
+          radial-gradient(circle at 80% 10%, rgba(34,232,255,.22), transparent 34%),
+          radial-gradient(circle at 20% 86%, rgba(159,94,255,.34), transparent 40%),
+          linear-gradient(140deg,var(--bg),var(--bg2));
+        min-height:100vh;
+      }
+
+      body::before{
+        content:'';
+        position:fixed;
+        inset:0;
+        pointer-events:none;
+        opacity:.15;
+        background-image:repeating-radial-gradient(circle at 1px 1px, #fff 0 1px, transparent 1px 19px);
+      }
+
+      .wrap{max-width:1120px;margin:0 auto;padding:20px 12px 64px;}
+      .card{
+        background:var(--card);
+        border:1px solid var(--stroke);
+        backdrop-filter: blur(10px);
+        border-radius:22px;
+        padding:16px;
+        margin-bottom:14px;
+        box-shadow:0 16px 40px rgba(0,0,0,.34);
+      }
+
+      .reveal{opacity:0;transform:translateY(20px);animation:in .9s ease forwards;animation-delay:var(--d,0ms)}
+      @keyframes in{to{opacity:1;transform:translateY(0)}}
+
+      h1,h2{font-family:'Unbounded',sans-serif;margin:0 0 8px;line-height:1.15}
+      h1{font-size:clamp(1.4rem,4.8vw,2.1rem)}
+      h2{font-size:1rem}
+      .small{font-size:.82rem;color:var(--muted)}
+
+      .grid{display:grid;gap:10px}
+      label{display:block;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;margin-bottom:6px;color:var(--muted)}
+
+      input,select{
+        width:100%;padding:10px;border-radius:12px;
+        border:1px solid rgba(255,255,255,.25);
+        background:rgba(6,4,15,.5);color:var(--txt);
+      }
+
+      .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      .kpi{border:1px solid var(--stroke);border-radius:14px;padding:10px;background:rgba(8,5,20,.5)}
+      .kpi b{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+      .kpi div{font-size:1.4rem;font-weight:800;margin-top:4px}
+
+      .btn{
+        border:none;border-radius:12px;padding:11px 14px;
+        font-weight:800;cursor:pointer;color:#190f2e;
+        background:linear-gradient(125deg,var(--sun),#f3ffd0);
+        box-shadow:0 10px 20px rgba(208,255,62,.24);
+        transition:transform .2s ease;
+      }
+      .btn:hover{transform:translateY(-2px)}
+
+      table{width:100%;border-collapse:separate;border-spacing:0 8px}
+      th{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;padding:0 8px}
+      td{background:rgba(8,5,20,.6);border:1px solid rgba(255,255,255,.12);padding:9px;border-left:none;border-right:none;font-size:.86rem}
+      tr td:first-child{border-left:1px solid rgba(255,255,255,.12);border-top-left-radius:10px;border-bottom-left-radius:10px}
+      tr td:last-child{border-right:1px solid rgba(255,255,255,.12);border-top-right-radius:10px;border-bottom-right-radius:10px}
+
+      .bar{height:12px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden}
+      .bar span{display:block;height:100%;background:linear-gradient(90deg,var(--aqua),var(--vio))}
+
+      .thumb{width:70px;height:70px;border-radius:10px;border:1px solid rgba(255,255,255,.22)}
+      .status{padding:10px;border-radius:10px;margin-top:10px;display:none}
+      .ok{display:block;background:rgba(62,231,154,.16);border:1px solid rgba(62,231,154,.5)}
+      .err{display:block;background:rgba(255,95,118,.16);border:1px solid rgba(255,95,118,.5)}
+
+      @media (min-width:780px){
+        .wrap{padding-top:30px}
+        .card{padding:22px}
+        .grid{grid-template-columns:1fr 1fr auto;align-items:end}
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card reveal" style="--d:120ms">
+        <h1>Panel Admin SST</h1>
+        <p class="small">Centro de control de cumplimiento: visual, móvil y accionable.</p>
+      </div>
+
+      <div class="card reveal" style="--d:260ms">
+        <h2>Filtros de dashboard</h2>
+        <div class="grid">
+          <div>
+            <label>Fecha</label>
+            <input type="date" id="fltDate">
+          </div>
+          <div>
+            <label>Zona</label>
+            <select id="fltZone"></select>
+          </div>
+          <div><button class="btn" onclick="reloadDashboard()">Actualizar dashboard</button></div>
+        </div>
+      </div>
+
+      <div class="card reveal" style="--d:380ms">
+        <h2>KPIs</h2>
+        <div class="kpi-grid">
+          <div class="kpi"><b>Total joyerías</b><div id="kpiTotal"></div></div>
+          <div class="kpi"><b>Registradas</b><div id="kpiReg"></div></div>
+          <div class="kpi"><b>Pendientes</b><div id="kpiPen"></div></div>
+        </div>
+      </div>
+
+      <div class="card reveal" style="--d:500ms">
+        <h2>Cumplimiento por joyería</h2>
+        <div id="complianceTable"></div>
+      </div>
+
+      <div class="card reveal" style="--d:620ms">
+        <h2>Distribución y envío de QR</h2>
+        <button class="btn" onclick="sendMassive()">Enviar QR masivo por correo</button>
+        <div id="sendStatus" class="status"></div>
+        <table style="margin-top:10px;">
+          <thead>
+            <tr>
+              <th>Joyería</th><th>Zona</th><th>QR</th><th>Enlace</th><th>WhatsApp</th>
+            </tr>
+          </thead>
+          <tbody id="qrRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const ADMIN_DATA = <?!= JSON.stringify(data) ?>;
+
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!ADMIN_DATA.isAdmin) {
+          document.body.innerHTML = '<div style="padding:20px;font-family:Manrope">No autorizado para ver este panel.</div>';
+          return;
+        }
+        initFilters();
+        paintDashboard(ADMIN_DATA.dashboard);
+        paintQrTable(ADMIN_DATA.qrCatalog || []);
+      });
+
+      function initFilters() {
+        const zone = document.getElementById('fltZone');
+        const date = document.getElementById('fltDate');
+        date.value = ADMIN_DATA.dashboard.date;
+        zone.innerHTML = '<option value="">Todas las zonas</option>' +
+          (ADMIN_DATA.dashboard.zones || []).map(z => `<option value="${esc(z)}">${esc(z)}</option>`).join('');
+      }
+
+      function reloadDashboard() {
+        const filter = {
+          date: document.getElementById('fltDate').value,
+          zone: document.getElementById('fltZone').value
+        };
+        google.script.run.withSuccessHandler(paintDashboard).getDashboardData(filter);
+      }
+
+      function paintDashboard(data) {
+        document.getElementById('kpiTotal').textContent = data.total;
+        document.getElementById('kpiReg').textContent = data.registradas;
+        document.getElementById('kpiPen').textContent = data.pendientes;
+
+        const rows = (data.complianceByJoyeria || []).map(item => `
+          <tr>
+            <td>${esc(item.joyeria)}</td>
+            <td>${esc(item.zona)}</td>
+            <td>
+              <div class="bar"><span style="width:${item.cumplimiento}%"></span></div>
+              <div class="small">${item.cumplimiento}% (${item.registros} registro/s)</div>
+            </td>
+          </tr>
+        `).join('');
+
+        document.getElementById('complianceTable').innerHTML = `
+          <table>
+            <thead><tr><th>Joyería</th><th>Zona</th><th>Cumplimiento</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="3">Sin datos para el filtro seleccionado.</td></tr>'}</tbody>
+          </table>
+        `;
+      }
+
+      function paintQrTable(list) {
+        const body = document.getElementById('qrRows');
+        body.innerHTML = list.map(item => `
+          <tr>
+            <td>${esc(item.nombre)}<br><span class="small">${esc(item.correo || '')}</span></td>
+            <td>${esc(item.zona || '')}</td>
+            <td><img class="thumb" src="${item.qrUrl}" alt="QR ${esc(item.nombre)}"></td>
+            <td><a href="${item.formUrl}" target="_blank">Abrir enlace</a></td>
+            <td>${item.whatsappUrl ? `<a href="${item.whatsappUrl}" target="_blank">Enviar por WhatsApp</a>` : '<span class="small">Sin número</span>'}</td>
+          </tr>
+        `).join('');
+      }
+
+      function sendMassive() {
+        const status = document.getElementById('sendStatus');
+        status.className = 'status';
+        status.style.display = 'block';
+        status.textContent = 'Enviando correos...';
+
+        google.script.run
+          .withSuccessHandler(res => {
+            status.className = 'status ok';
+            status.textContent = `Envío completado. Correos enviados: ${res.sent}`;
+          })
+          .withFailureHandler(err => {
+            status.className = 'status err';
+            status.textContent = err.message || 'Error durante envío masivo.';
+          })
+          .sendMassiveQrEmails();
+      }
+
+      function esc(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    </script>
+  </body>
+</html>
