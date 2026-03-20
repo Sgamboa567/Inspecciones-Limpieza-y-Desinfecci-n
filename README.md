@@ -10,6 +10,11 @@
 - Registro fotográfico, observaciones y firma digital.
 - Panel admin (`?admin=1`) con:
   - KPIs (registradas / pendientes).
+  - Filtro por mes y zona.
+  - Gráficas de cumplimiento por joyería (barra de progreso).
+  - Tabla de QR, link de formulario, y link directo de WhatsApp.
+  - Envío masivo de QR por correo.
+  - Carga/actualización de joyerías por CSV.
   - Filtro por fecha y zona.
   - Gráficas de cumplimiento por joyería (barra de progreso).
   - Tabla de QR, link de formulario, y link directo de WhatsApp.
@@ -41,6 +46,7 @@ Se guarda una fila por cada envío con este orden:
 
 1. En `Code.gs`, actualiza:
    - `SPREADSHEET_ID`
+   - `BRAND_LOGO_URL` (usa URL directa de imagen en Drive: `https://drive.google.com/uc?export=view&id=FILE_ID`)
    - `ADMIN_EMAILS`
    - `INSPECTOR_EMAILS`
    - `JOYERIAS` (id, nombre, correo, zona, whatsapp)
@@ -51,12 +57,16 @@ Se guarda una fila por cada envío con este orden:
    - Ejecutar como: tú
    - Acceso: según política de tu organización
 4. Copia la URL del Web App.
+5. Si deseas cargar masivamente joyerías, entra a Admin y pega el CSV con encabezado:
+   `joyeria,apoderado,sociedad_nombre,departamento,ciudad,zona`
 
 ## URLs de uso
 
 - Formulario general: `https://.../exec`
 - Formulario por QR de joyería: `https://.../exec?s=med-centro`
 - Panel admin: `https://.../exec?admin=1`
+
+> Apps Script abre el formulario por defecto (Index). Para entrar al panel administrativo debes agregar `?admin=1` a la URL desplegada.
 
 ## Flujo recomendado de operación
 
@@ -80,3 +90,22 @@ Se guarda una fila por cada envío con este orden:
 - `sendMonthlyReminder()`
 - `sendMassiveQrEmails()` (solo admins)
 
+## Si el PR aparece con conflictos (guía rápida)
+
+1. Trae la última versión de la rama destino (ej. `main`).
+2. Rebasea tu rama de trabajo:
+   - `git checkout <tu-rama>`
+   - `git fetch origin`
+   - `git rebase origin/main`
+3. Resuelve conflictos en este orden recomendado:
+   - `Code.gs`
+   - `Admin.html`
+   - `Index.hmtl`
+   - `README.md`
+4. Marca archivos resueltos y continúa:
+   - `git add .`
+   - `git rebase --continue`
+5. Sube la rama:
+   - `git push --force-with-lease`
+
+> Como este proyecto concentra lógica en pocos archivos, es normal ver varios conflictos si otra rama editó las mismas secciones. Rebase frecuente reduce ese riesgo.

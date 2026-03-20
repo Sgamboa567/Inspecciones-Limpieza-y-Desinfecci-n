@@ -5,6 +5,8 @@ const CONFIG = {
   SPREADSHEET_ID: '17D6liGwLTdxe3W4GM5VQznuPKa3E-sactge4gWT02q4',
   SHEET_NAME: 'Registros',
   DRIVE_FOLDER_NAME: 'Inspecciones Limpieza y Desinfección',
+  BRAND_LOGO_URL: 'https://drive.google.com/uc?export=view&id=REEMPLAZAR_ID_ARCHIVO_LOGO',
+  JOYERIAS_STORE_KEY: 'JOYERIAS_JSON',
   ADMIN_EMAILS: [
     'sgamboa765@gmail.com',
     'deudaspresuntas.aynn@gmail.com'
@@ -18,6 +20,10 @@ const CONFIG = {
       id: 'med-centro',
       nombre: 'Joyería Medellín Centro',
       correo: 'medellin.centro@joyeria.com',
+      apoderado: '',
+      sociedad_nombre: '',
+      departamento: 'Antioquia',
+      ciudad: 'Medellín',
       zona: 'Antioquia',
       whatsapp: '573001112233'
     },
@@ -25,6 +31,10 @@ const CONFIG = {
       id: 'bog-norte',
       nombre: 'Joyería Bogotá Norte',
       correo: 'bogota.norte@joyeria.com',
+      apoderado: '',
+      sociedad_nombre: '',
+      departamento: 'Bogotá D.C.',
+      ciudad: 'Bogotá D.C.',
       zona: 'Cundinamarca',
       whatsapp: '573004445566'
     },
@@ -32,6 +42,10 @@ const CONFIG = {
       id: 'cali-sur',
       nombre: 'Joyería Cali Sur',
       correo: 'cali.sur@joyeria.com',
+      apoderado: '',
+      sociedad_nombre: '',
+      departamento: 'Valle del Cauca',
+      ciudad: 'Cali',
       zona: 'Valle del Cauca',
       whatsapp: '573007778899'
     }
@@ -71,6 +85,9 @@ function doGet(e) {
       isAdmin: isCurrentUserAdmin_(),
       dashboard: getDashboardData_(),
       qrCatalog: getQrCatalog_(),
+      joyerias: getJoyerias_(),
+      webAppUrl: ScriptApp.getService().getUrl() || '',
+      logoUrl: CONFIG.BRAND_LOGO_URL
       webAppUrl: ScriptApp.getService().getUrl() || ''
     };
     return template.evaluate().setTitle('Panel Admin SST');
@@ -81,11 +98,13 @@ function doGet(e) {
 
   const template = HtmlService.createTemplateFromFile('Index');
   template.data = {
-    joyerias: CONFIG.JOYERIAS,
+    joyerias: getJoyerias_(),
     areas: CONFIG.AREAS,
     checklist: CONFIG.CHECKLIST_ITEMS,
     selectedJoyeriaId: joyeria ? joyeria.id : '',
     selectedJoyeriaName: joyeria ? joyeria.nombre : '',
+    selectedJoyeriaEmail: joyeria ? joyeria.correo : '',
+    logoUrl: CONFIG.BRAND_LOGO_URL
     selectedJoyeriaEmail: joyeria ? joyeria.correo : ''
   };
   return template.evaluate().setTitle('Formato Limpieza y Desinfección');
@@ -97,7 +116,7 @@ function include(filename) {
 
 function getFormData_() {
   return {
-    joyerias: CONFIG.JOYERIAS,
+    joyerias: getJoyerias_(),
     areas: CONFIG.AREAS,
     checklist: CONFIG.CHECKLIST_ITEMS
   };
@@ -134,6 +153,19 @@ function isCurrentUserAdmin_() {
  * DATOS DINÁMICOS
  **********************/
 function getJoyeriaById_(id) {
+  return getJoyerias_().find(j => j.id === id) || null;
+}
+
+function getJoyerias_() {
+  const raw = PropertiesService.getScriptProperties().getProperty(CONFIG.JOYERIAS_STORE_KEY);
+  if (!raw) return CONFIG.JOYERIAS;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed : CONFIG.JOYERIAS;
+  } catch (err) {
+    return CONFIG.JOYERIAS;
+  }
   return CONFIG.JOYERIAS.find(j => j.id === id) || null;
 }
 
@@ -246,12 +278,19 @@ function getDashboardData(filter) {
 
 function getDashboardData_(filter) {
   const zone = (filter && filter.zone) || '';
+  const month = (filter && filter.month) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM');
+  const joyerias = getJoyerias_();
   const date = (filter && filter.date) || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
 
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
   const rows = (sheet && sheet.getLastRow() > 1) ? sheet.getDataRange().getValues().slice(1) : [];
 
+  const joyeriasFiltradas = joyerias.filter(j => !zone || j.zona === zone);
+  const joyeriasMap = {};
+  joyeriasFiltradas.forEach(j => joyeriasMap[j.id] = j);
+
+  const byDate = rows.filter(r => String(r[1] || '').startsWith(month) && joyeriasMap[r[2]]);
   const joyeriasFiltradas = CONFIG.JOYERIAS.filter(j => !zone || j.zona === zone);
   const joyeriasMap = {};
   joyeriasFiltradas.forEach(j => joyeriasMap[j.id] = j);
@@ -280,6 +319,9 @@ function getDashboardData_(filter) {
   });
 
   return {
+    month,
+    zone,
+    zones: [...new Set(joyerias.map(j => j.zona))],
     date,
     zone,
     zones: [...new Set(CONFIG.JOYERIAS.map(j => j.zona))],
@@ -292,6 +334,7 @@ function getDashboardData_(filter) {
 
 function getQrCatalog_() {
   const webAppUrl = ScriptApp.getService().getUrl() || '';
+  return getJoyerias_().map(j => {
   return CONFIG.JOYERIAS.map(j => {
     const formUrl = `${webAppUrl}?s=${encodeURIComponent(j.id)}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(formUrl)}`;
@@ -305,6 +348,43 @@ function getQrCatalog_() {
       whatsappUrl
     };
   });
+}
+
+function saveJoyeriasCsv(csvText) {
+  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+  if (!csvText || !csvText.trim()) throw new Error('Debes enviar el CSV.');
+
+  const parsed = Utilities.parseCsv(csvText.trim());
+  if (parsed.length < 2) throw new Error('CSV sin datos.');
+
+  const header = parsed[0].map(h => h.trim().toLowerCase());
+  const idx = {
+    joyeria: header.indexOf('joyeria'),
+    apoderado: header.indexOf('apoderado'),
+    sociedad_nombre: header.indexOf('sociedad_nombre'),
+    departamento: header.indexOf('departamento'),
+    ciudad: header.indexOf('ciudad'),
+    zona: header.indexOf('zona')
+  };
+  if (idx.joyeria < 0) throw new Error('El CSV debe incluir la columna "joyeria".');
+
+  const data = parsed.slice(1).filter(r => r[idx.joyeria] && r[idx.joyeria].trim()).map(r => {
+    const nombre = (r[idx.joyeria] || '').trim();
+    return {
+      id: slugify_(nombre),
+      nombre: nombre,
+      apoderado: idx.apoderado >= 0 ? (r[idx.apoderado] || '').trim() : '',
+      sociedad_nombre: idx.sociedad_nombre >= 0 ? (r[idx.sociedad_nombre] || '').trim() : '',
+      departamento: idx.departamento >= 0 ? (r[idx.departamento] || '').trim() : '',
+      ciudad: idx.ciudad >= 0 ? (r[idx.ciudad] || '').trim() : '',
+      zona: idx.zona >= 0 ? (r[idx.zona] || '').trim() : '',
+      correo: '',
+      whatsapp: ''
+    };
+  });
+
+  PropertiesService.getScriptProperties().setProperty(CONFIG.JOYERIAS_STORE_KEY, JSON.stringify(data));
+  return { ok: true, total: data.length };
 }
 
 function getQrCatalog() {
@@ -470,6 +550,14 @@ function base64ToBlob_(base64Data, fileName, mimeType) {
 
 function sanitizeName_(name) {
   return name.replace(/[\\/:*?"<>|#%{}~&]/g, '-');
+}
+
+function slugify_(name) {
+  return String(name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function escapeHtml_(text) {
