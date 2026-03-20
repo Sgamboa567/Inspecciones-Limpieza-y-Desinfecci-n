@@ -433,6 +433,50 @@ function updateJoyeria(payload) {
   return { ok: true, joyeria: updated };
 }
 
+function createJoyeria(payload) {
+  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+
+  const nombre = String((payload && payload.nombre) || '').trim();
+  const inputId = String((payload && payload.id) || '').trim();
+  const id = inputId || slugify_(nombre);
+
+  if (!nombre) throw new Error('El nombre de la joyería es obligatorio.');
+  if (!id) throw new Error('No se pudo generar el ID de la joyería.');
+
+  const stores = getJoyerias_();
+  if (stores.some(j => j.id === id)) throw new Error('Ya existe una joyería con ese ID.');
+
+  const newStore = {
+    id,
+    nombre,
+    correo: String((payload && payload.correo) || '').trim(),
+    apoderado: String((payload && payload.apoderado) || '').trim(),
+    sociedad_nombre: String((payload && payload.sociedad_nombre) || '').trim(),
+    departamento: String((payload && payload.departamento) || '').trim(),
+    ciudad: String((payload && payload.ciudad) || '').trim(),
+    zona: String((payload && payload.zona) || '').trim(),
+    whatsapp: String((payload && payload.whatsapp) || '').trim()
+  };
+
+  stores.push(newStore);
+  PropertiesService.getScriptProperties().setProperty(CONFIG.JOYERIAS_STORE_KEY, JSON.stringify(stores));
+  return { ok: true, joyeria: newStore };
+}
+
+function deleteJoyeria(joyeriaId) {
+  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+
+  const id = String(joyeriaId || '').trim();
+  if (!id) throw new Error('ID de joyería requerido para eliminar.');
+
+  const stores = getJoyerias_();
+  const next = stores.filter(j => j.id !== id);
+  if (next.length === stores.length) throw new Error('No se encontró la joyería a eliminar.');
+
+  PropertiesService.getScriptProperties().setProperty(CONFIG.JOYERIAS_STORE_KEY, JSON.stringify(next));
+  return { ok: true, deletedId: id };
+}
+
 function sendMassiveQrEmails() {
   if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
 

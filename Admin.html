@@ -24,6 +24,7 @@
       .status{padding:10px;border-radius:8px;margin-top:8px;display:none}.ok{display:block;background:#eaf7ea;color:#1a6d1a;border:1px solid #a8d4a8}.err{display:block;background:#fbecec;color:#a32c2c;border:1px solid #e3b0b0}
       .btn-ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
       .icon-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+      .icon-btn.danger{border-color:#d5a4a4;color:#9e1c1c}
       .editor-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
       .editor-grid .full{grid-column:1/-1}
       .muted{color:var(--muted)}
@@ -95,6 +96,7 @@
         </div>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="loadStores()">Filtrar</button>
+          <button class="btn" onclick="openCreate()">+ Nueva joyería</button>
           <button class="btn btn-ghost" onclick="clearStoreFilters()">Limpiar filtros</button>
           <span class="small muted" id="storeCount"></span>
         </div>
@@ -175,6 +177,7 @@
       }
 
       let currentStore = null;
+      let isCreating = false;
       document.getElementById('storeSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadStores(); });
 
       function loadStores() {
@@ -197,7 +200,7 @@
             <td>${esc(item.zona || '')}</td>
             <td>${esc(item.ciudad || '')}</td>
             <td>${esc(item.apoderado || '')}</td>
-            <td><button class="icon-btn" onclick="openEdit('${encodeURIComponent(item.id || '')}')" title="Editar">✏️</button></td>
+            <td style="display:flex;gap:6px"><button class="icon-btn" onclick="openEdit('${encodeURIComponent(item.id || '')}')" title="Editar">✏️</button><button class="icon-btn danger" onclick="deleteStore('${encodeURIComponent(item.id || '')}')" title="Eliminar">🗑️</button></td>
           </tr>
         `).join('');
 
@@ -209,14 +212,50 @@
         if (cityEl.options.length <= 1) cityEl.innerHTML = '<option value="">Todas</option>' + (data.cities || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
       }
 
+      function openCreate() {
+        showSection('stores');
+        isCreating = true;
+        currentStore = null;
+        document.getElementById('editCard').style.display = 'block';
+        document.getElementById('edId').disabled = false;
+        document.getElementById('edId').value = '';
+        document.getElementById('edNombre').value = '';
+        document.getElementById('edCorreo').value = '';
+        document.getElementById('edWhatsapp').value = '';
+        document.getElementById('edApoderado').value = '';
+        document.getElementById('edSociedad').value = '';
+        document.getElementById('edDepartamento').value = '';
+        document.getElementById('edCiudad').value = '';
+        document.getElementById('edZona').value = '';
+      }
+
+      function deleteStore(encodedId) {
+        const id = decodeURIComponent(encodedId || '');
+        if (!id) return;
+        const ok = confirm(`¿Eliminar la joyería ${id}? Esta acción no se puede deshacer.`);
+        if (!ok) return;
+
+        google.script.run
+          .withSuccessHandler(() => {
+            showStoreStatus('Joyería eliminada correctamente.', false);
+            if (currentStore && currentStore.id === id) cancelEdit();
+            loadStores();
+            reloadDashboard();
+          })
+          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo eliminar.', true))
+          .deleteJoyeria(id);
+      }
+
       function openEdit(encodedId) {
         showSection('stores');
+        isCreating = false;
         const id = decodeURIComponent(encodedId || '');
         google.script.run.withSuccessHandler(data => {
           const item = (data.rows || []).find(r => r.id === id);
           if (!item) return;
           currentStore = item;
           document.getElementById('editCard').style.display = 'block';
+          document.getElementById('edId').disabled = true;
           document.getElementById('edId').value = item.id || '';
           document.getElementById('edNombre').value = item.nombre || '';
           document.getElementById('edCorreo').value = item.correo || '';
@@ -231,7 +270,6 @@
       }
 
       function saveStoreEdit() {
-        if (!currentStore) return;
         const payload = {
           id: document.getElementById('edId').value,
           nombre: document.getElementById('edNombre').value,
@@ -243,19 +281,26 @@
           ciudad: document.getElementById('edCiudad').value,
           zona: document.getElementById('edZona').value
         };
-        google.script.run
+        const runner = google.script.run
           .withSuccessHandler(() => {
-            showStoreStatus('Joyería actualizada correctamente.', false);
+            showStoreStatus(isCreating ? 'Joyería creada correctamente.' : 'Joyería actualizada correctamente.', false);
             cancelEdit();
             loadStores();
             reloadDashboard();
           })
-          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo guardar.', true))
-          .updateJoyeria(payload);
+          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo guardar.', true));
+
+        if (isCreating) {
+          runner.createJoyeria(payload);
+          return;
+        }
+        runner.updateJoyeria(payload);
       }
 
       function cancelEdit() {
         currentStore = null;
+        isCreating = false;
+        document.getElementById('edId').disabled = true;
         document.getElementById('editCard').style.display = 'none';
       }
 

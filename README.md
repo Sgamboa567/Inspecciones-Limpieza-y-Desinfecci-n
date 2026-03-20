@@ -15,7 +15,7 @@
   - Tabla de QR, link de formulario, y link directo de WhatsApp.
   - Envío masivo de QR por correo.
   - Menú de accesos rápidos (Cumplimiento / QR y envíos / Joyerías) para navegar sin hacer scroll largo.
-  - Gestión de joyerías con filtros y edición (botón ✏️).
+  - Gestión de joyerías con filtros, creación (+ Nueva joyería), edición (✏️) y eliminación (🗑️).
 
 ## Estructura de columnas esperada en la hoja `Registros`
 
