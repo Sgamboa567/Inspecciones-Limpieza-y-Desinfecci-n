@@ -22,6 +22,11 @@
       .bar{height:10px;background:#ececec;border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:#1f1f1f}
       .thumb{width:62px;height:62px;border:1px solid var(--line);border-radius:8px}
       .status{padding:10px;border-radius:8px;margin-top:8px;display:none}.ok{display:block;background:#eaf7ea;color:#1a6d1a;border:1px solid #a8d4a8}.err{display:block;background:#fbecec;color:#a32c2c;border:1px solid #e3b0b0}
+      .btn-ghost{background:#fff;color:var(--text);border:1px solid var(--line)}
+      .icon-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer}
+      .editor-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+      .editor-grid .full{grid-column:1/-1}
+      .muted{color:var(--muted)}
       @media (min-width:780px){.grid{grid-template-columns:1fr 1fr auto;align-items:end}}
     </style>
   </head>
@@ -67,11 +72,42 @@
       </div>
 
       <div class="card">
-        <h2>Actualizar joyerías por CSV</h2>
-        <p class="small">Pega el CSV con columnas: joyeria,apoderado,sociedad_nombre,departamento,ciudad,zona</p>
-        <textarea id="csvInput" style="width:100%;min-height:140px;border:1px solid var(--line);border-radius:8px;padding:10px;"></textarea>
-        <div style="margin-top:8px"><button class="btn" onclick="saveCsv()">Guardar joyerías</button></div>
-        <div id="csvStatus" class="status"></div>
+        <h2>Gestión de joyerías</h2>
+        <p class="small">Busca por nombre/código y usa el botón de lápiz para editar datos de la joyería.</p>
+        <div class="grid">
+          <div><label>Buscar</label><input id="storeSearch" placeholder="Ej: 195, Medellín, apoderado..."></div>
+          <div><label>Zona</label><select id="storeZone"><option value="">Todas</option></select></div>
+          <div><label>Ciudad</label><select id="storeCity"><option value="">Todas</option></select></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="loadStores()">Filtrar</button>
+          <button class="btn btn-ghost" onclick="clearStoreFilters()">Limpiar filtros</button>
+          <span class="small muted" id="storeCount"></span>
+        </div>
+        <table style="margin-top:10px;">
+          <thead><tr><th>Joyería</th><th>Zona</th><th>Ciudad</th><th>Apoderado</th><th>Acción</th></tr></thead>
+          <tbody id="storeRows"></tbody>
+        </table>
+        <div id="storeStatus" class="status"></div>
+      </div>
+
+      <div class="card" id="editCard" style="display:none">
+        <h2>Editar joyería</h2>
+        <div class="editor-grid">
+          <div><label>ID</label><input id="edId" disabled></div>
+          <div><label>Nombre</label><input id="edNombre"></div>
+          <div><label>Correo</label><input id="edCorreo"></div>
+          <div><label>WhatsApp</label><input id="edWhatsapp"></div>
+          <div><label>Apoderado</label><input id="edApoderado"></div>
+          <div><label>Sociedad</label><input id="edSociedad"></div>
+          <div><label>Departamento</label><input id="edDepartamento"></div>
+          <div><label>Ciudad</label><input id="edCiudad"></div>
+          <div class="full"><label>Zona</label><input id="edZona"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn" onclick="saveStoreEdit()">Guardar cambios</button>
+          <button class="btn btn-ghost" onclick="cancelEdit()">Cancelar</button>
+        </div>
       </div>
     </div>
 
@@ -79,7 +115,7 @@
       const ADMIN_DATA = <?!= JSON.stringify(data) ?>;
       document.addEventListener('DOMContentLoaded', () => {
         if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px">No autorizado para ver este panel.</div>'; return; }
-        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []);
+        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); loadStores();
       });
       function initFilters() {
         document.getElementById('fltMonth').value = ADMIN_DATA.dashboard.month;
@@ -103,21 +139,103 @@
         const status = document.getElementById('sendStatus'); status.className = 'status'; status.style.display = 'block'; status.textContent = 'Enviando correos...';
         google.script.run.withSuccessHandler(res => { status.className = 'status ok'; status.textContent = `Envío completado. Correos enviados: ${res.sent}`; }).withFailureHandler(err => { status.className = 'status err'; status.textContent = err.message || 'Error durante envío masivo.'; }).sendMassiveQrEmails();
       }
-      function saveCsv() {
-        const csv = document.getElementById('csvInput').value;
-        const status = document.getElementById('csvStatus');
-        status.className = 'status'; status.style.display = 'block'; status.textContent = 'Guardando joyerías...';
+      let currentStore = null;
+      document.getElementById('storeSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadStores(); });
+
+      function loadStores() {
+        const filter = {
+          q: document.getElementById('storeSearch').value,
+          zone: document.getElementById('storeZone').value,
+          city: document.getElementById('storeCity').value
+        };
         google.script.run
-          .withSuccessHandler(res => {
-            status.className = 'status ok';
-            status.textContent = `Se cargaron ${res.total} joyerías. Recarga el panel para ver cambios.`;
-          })
-          .withFailureHandler(err => {
-            status.className = 'status err';
-            status.textContent = err.message || 'No se pudo guardar el CSV.';
-          })
-          .saveJoyeriasCsv(csv);
+          .withSuccessHandler(paintStores)
+          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo cargar el listado.', true))
+          .getJoyeriasAdminData(filter);
       }
+
+      function paintStores(data) {
+        const rows = data.rows || [];
+        document.getElementById('storeRows').innerHTML = rows.map(item => `
+          <tr>
+            <td><b>${esc(item.nombre)}</b><br><span class="small">${esc(item.id)}</span></td>
+            <td>${esc(item.zona || '')}</td>
+            <td>${esc(item.ciudad || '')}</td>
+            <td>${esc(item.apoderado || '')}</td>
+            <td><button class="icon-btn" onclick="openEdit('${encodeURIComponent(item.id || '')}')" title="Editar">✏️</button></td>
+          </tr>
+        `).join('');
+
+        document.getElementById('storeCount').textContent = `${rows.length} joyerías encontradas`;
+
+        const zoneEl = document.getElementById('storeZone');
+        const cityEl = document.getElementById('storeCity');
+        if (zoneEl.options.length <= 1) zoneEl.innerHTML = '<option value="">Todas</option>' + (data.zones || []).map(z => `<option value="${esc(z)}">${esc(z)}</option>`).join('');
+        if (cityEl.options.length <= 1) cityEl.innerHTML = '<option value="">Todas</option>' + (data.cities || []).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      }
+
+      function openEdit(encodedId) {
+        const id = decodeURIComponent(encodedId || '');
+        google.script.run.withSuccessHandler(data => {
+          const item = (data.rows || []).find(r => r.id === id);
+          if (!item) return;
+          currentStore = item;
+          document.getElementById('editCard').style.display = 'block';
+          document.getElementById('edId').value = item.id || '';
+          document.getElementById('edNombre').value = item.nombre || '';
+          document.getElementById('edCorreo').value = item.correo || '';
+          document.getElementById('edWhatsapp').value = item.whatsapp || '';
+          document.getElementById('edApoderado').value = item.apoderado || '';
+          document.getElementById('edSociedad').value = item.sociedad_nombre || '';
+          document.getElementById('edDepartamento').value = item.departamento || '';
+          document.getElementById('edCiudad').value = item.ciudad || '';
+          document.getElementById('edZona').value = item.zona || '';
+          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }).getJoyeriasAdminData({ q: id });
+      }
+
+      function saveStoreEdit() {
+        if (!currentStore) return;
+        const payload = {
+          id: document.getElementById('edId').value,
+          nombre: document.getElementById('edNombre').value,
+          correo: document.getElementById('edCorreo').value,
+          whatsapp: document.getElementById('edWhatsapp').value,
+          apoderado: document.getElementById('edApoderado').value,
+          sociedad_nombre: document.getElementById('edSociedad').value,
+          departamento: document.getElementById('edDepartamento').value,
+          ciudad: document.getElementById('edCiudad').value,
+          zona: document.getElementById('edZona').value
+        };
+        google.script.run
+          .withSuccessHandler(() => {
+            showStoreStatus('Joyería actualizada correctamente.', false);
+            cancelEdit();
+            loadStores();
+            reloadDashboard();
+          })
+          .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo guardar.', true))
+          .updateJoyeria(payload);
+      }
+
+      function cancelEdit() {
+        currentStore = null;
+        document.getElementById('editCard').style.display = 'none';
+      }
+
+      function clearStoreFilters() {
+        document.getElementById('storeSearch').value = '';
+        document.getElementById('storeZone').value = '';
+        document.getElementById('storeCity').value = '';
+        loadStores();
+      }
+
+      function showStoreStatus(message, isError) {
+        const status = document.getElementById('storeStatus');
+        status.className = 'status ' + (isError ? 'err' : 'ok');
+        status.textContent = message;
+      }
+
       function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
     </script>
   </body>

@@ -379,6 +379,60 @@ function getQrCatalog() {
   return getQrCatalog_();
 }
 
+function getJoyeriasAdminData(filter) {
+  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+
+  const q = (filter && filter.q ? String(filter.q) : '').toLowerCase().trim();
+  const zone = (filter && filter.zone ? String(filter.zone) : '').trim();
+  const city = (filter && filter.city ? String(filter.city) : '').trim();
+  const stores = getJoyerias_();
+
+  const list = stores.filter(j => {
+    if (zone && j.zona !== zone) return false;
+    if (city && j.ciudad !== city) return false;
+
+    if (!q) return true;
+    const haystack = [j.id, j.nombre, j.apoderado, j.sociedad_nombre, j.departamento, j.ciudad, j.zona, j.correo].join(' ').toLowerCase();
+    return haystack.indexOf(q) >= 0;
+  });
+
+  return {
+    rows: list,
+    zones: [...new Set(stores.map(j => j.zona).filter(Boolean))].sort(),
+    cities: [...new Set(stores.map(j => j.ciudad).filter(Boolean))].sort(),
+    total: list.length
+  };
+}
+
+function updateJoyeria(payload) {
+  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+  if (!payload || !payload.id) throw new Error('ID de joyería requerido.');
+
+  const stores = getJoyerias_();
+  const index = stores.findIndex(j => j.id === payload.id);
+  if (index < 0) throw new Error('No se encontró la joyería a actualizar.');
+
+  const current = stores[index];
+  const updated = {
+    ...current,
+    nombre: String(payload.nombre || '').trim(),
+    correo: String(payload.correo || '').trim(),
+    apoderado: String(payload.apoderado || '').trim(),
+    sociedad_nombre: String(payload.sociedad_nombre || '').trim(),
+    departamento: String(payload.departamento || '').trim(),
+    ciudad: String(payload.ciudad || '').trim(),
+    zona: String(payload.zona || '').trim(),
+    whatsapp: String(payload.whatsapp || '').trim()
+  };
+
+  if (!updated.nombre) throw new Error('El nombre de la joyería es obligatorio.');
+
+  stores[index] = updated;
+  PropertiesService.getScriptProperties().setProperty(CONFIG.JOYERIAS_STORE_KEY, JSON.stringify(stores));
+
+  return { ok: true, joyeria: updated };
+}
+
 function sendMassiveQrEmails() {
   if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
 

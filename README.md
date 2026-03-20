@@ -14,7 +14,7 @@
   - Gráficas de cumplimiento por joyería (barra de progreso).
   - Tabla de QR, link de formulario, y link directo de WhatsApp.
   - Envío masivo de QR por correo.
-  - Carga/actualización de joyerías por CSV.
+  - Gestión de joyerías con filtros y edición (botón ✏️).
 
 ## Estructura de columnas esperada en la hoja `Registros`
 
@@ -53,8 +53,8 @@ Se guarda una fila por cada envío con este orden:
    - Ejecutar como: tú
    - Acceso: según política de tu organización
 4. Copia la URL del Web App.
-5. Si deseas cargar masivamente joyerías, entra a Admin y pega el CSV con encabezado:
-   `joyeria,apoderado,sociedad_nombre,departamento,ciudad,zona`
+5. Si ya cargaste el CSV una vez, quedó guardado en `Script Properties` (`JOYERIAS_JSON`).
+6. Desde Admin puedes editar joyerías con botón ✏️ y filtros por zona/ciudad/búsqueda.
 
 ## URLs de uso
 
@@ -68,10 +68,11 @@ Se guarda una fila por cada envío con este orden:
 
 1. SST entra al panel admin.
 2. Revisa dashboard por fecha/zona.
-3. Envía QR masivo por correo con un clic.
-4. Si una joyería usa WhatsApp, abre el link de la columna WhatsApp.
-5. Cada sede registra inspección desde su QR.
-6. SST monitorea pendientes y cumplimiento en el panel.
+3. Filtra joyerías por zona/ciudad o texto y actualiza datos con ✏️ (correo, apoderado, sociedad, ciudad, zona, etc.).
+4. Envía QR masivo por correo con un clic.
+5. Si una joyería usa WhatsApp, abre el link de la columna WhatsApp.
+6. Cada sede registra inspección desde su QR.
+7. SST monitorea pendientes y cumplimiento en el panel.
 
 ## Buenas prácticas
 
