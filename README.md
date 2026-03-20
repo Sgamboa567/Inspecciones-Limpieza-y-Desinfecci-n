@@ -15,10 +15,6 @@
   - Tabla de QR, link de formulario, y link directo de WhatsApp.
   - Envío masivo de QR por correo.
   - Carga/actualización de joyerías por CSV.
-  - Filtro por fecha y zona.
-  - Gráficas de cumplimiento por joyería (barra de progreso).
-  - Tabla de QR, link de formulario, y link directo de WhatsApp.
-  - Envío masivo de QR por correo.
 
 ## Estructura de columnas esperada en la hoja `Registros`
 
