@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      :root { --bg:#f5f5f5; --card:#fff; --text:#121212; --muted:#606060; --line:#d9d9d9; --black:#131313; }
+      *{box-sizing:border-box}
+      body{margin:0;font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text)}
+      .wrap{max-width:1100px;margin:0 auto;padding:14px}
+      .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+      .brand img{max-width:240px;width:58vw;height:auto;object-fit:contain}
+      h1,h2{margin:0 0 8px}.small{font-size:.86rem;color:var(--muted)}
+      .grid{display:grid;gap:10px}
+      label{display:block;font-size:.88rem;font-weight:600;margin-bottom:6px}
+      input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+      .btn{border:none;background:var(--black);color:#fff;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer}
+      .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+      .kpi{border:1px solid var(--line);border-radius:10px;padding:10px}
+      .kpi b{font-size:.8rem;color:var(--muted)} .kpi div{font-size:1.3rem;font-weight:700;margin-top:3px}
+      table{width:100%;border-collapse:collapse}.th, th{font-size:.78rem;text-transform:uppercase;color:var(--muted)} th,td{border-bottom:1px solid var(--line);text-align:left;padding:8px;font-size:.88rem}
+      .bar{height:10px;background:#ececec;border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:#1f1f1f}
+      .thumb{width:62px;height:62px;border:1px solid var(--line);border-radius:8px}
+      .status{padding:10px;border-radius:8px;margin-top:8px;display:none}.ok{display:block;background:#eaf7ea;color:#1a6d1a;border:1px solid #a8d4a8}.err{display:block;background:#fbecec;color:#a32c2c;border:1px solid #e3b0b0}
+      @media (min-width:780px){.grid{grid-template-columns:1fr 1fr auto;align-items:end}}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card brand">
+        <img src="<?= data.logoUrl ?>" alt="Logo OROEXPRESS" onerror="this.style.display='none'">
+        <h1>Panel Admin SST</h1>
+        <p class="small">Control de registros diarios, cumplimiento y distribución de enlaces QR.</p>
+      </div>
+
+      <div class="card">
+        <h2>Filtros de dashboard</h2>
+        <div class="grid">
+          <div><label>Mes</label><input type="month" id="fltMonth"></div>
+          <div><label>Zona</label><select id="fltZone"></select></div>
+          <div><button class="btn" onclick="reloadDashboard()">Actualizar dashboard</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>KPIs</h2>
+        <div class="kpi-grid">
+          <div class="kpi"><b>Total joyerías</b><div id="kpiTotal"></div></div>
+          <div class="kpi"><b>Registradas</b><div id="kpiReg"></div></div>
+          <div class="kpi"><b>Pendientes</b><div id="kpiPen"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Cumplimiento por joyería</h2>
+        <div id="complianceTable"></div>
+      </div>
+
+      <div class="card">
+        <h2>Distribución y envío de QR</h2>
+        <button class="btn" onclick="sendMassive()">Enviar QR masivo por correo</button>
+        <div id="sendStatus" class="status"></div>
+        <table style="margin-top:10px;">
+          <thead><tr><th>Joyería</th><th>Zona</th><th>QR</th><th>Enlace</th><th>WhatsApp</th></tr></thead>
+          <tbody id="qrRows"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Actualizar joyerías por CSV</h2>
+        <p class="small">Pega el CSV con columnas: joyeria,apoderado,sociedad_nombre,departamento,ciudad,zona</p>
+        <textarea id="csvInput" style="width:100%;min-height:140px;border:1px solid var(--line);border-radius:8px;padding:10px;"></textarea>
+        <div style="margin-top:8px"><button class="btn" onclick="saveCsv()">Guardar joyerías</button></div>
+        <div id="csvStatus" class="status"></div>
+      </div>
+    </div>
+
+    <script>
+      const ADMIN_DATA = <?!= JSON.stringify(data) ?>;
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px">No autorizado para ver este panel.</div>'; return; }
+        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []);
+      });
+      function initFilters() {
+        document.getElementById('fltMonth').value = ADMIN_DATA.dashboard.month;
+        document.getElementById('fltZone').innerHTML = '<option value="">Todas las zonas</option>' + (ADMIN_DATA.dashboard.zones || []).map(z => `<option value="${esc(z)}">${esc(z)}</option>`).join('');
+      }
+      function reloadDashboard() {
+        const filter = { month: document.getElementById('fltMonth').value, zone: document.getElementById('fltZone').value };
+        google.script.run.withSuccessHandler(paintDashboard).getDashboardData(filter);
+      }
+      function paintDashboard(data) {
+        document.getElementById('kpiTotal').textContent = data.total;
+        document.getElementById('kpiReg').textContent = data.registradas;
+        document.getElementById('kpiPen').textContent = data.pendientes;
+        const rows = (data.complianceByJoyeria || []).map(item => `<tr><td>${esc(item.joyeria)}</td><td>${esc(item.zona)}</td><td><div class="bar"><span style="width:${item.cumplimiento}%"></span></div><div class="small">${item.cumplimiento}% (${item.registros} registro/s)</div></td></tr>`).join('');
+        document.getElementById('complianceTable').innerHTML = `<table><thead><tr><th>Joyería</th><th>Zona</th><th>Cumplimiento</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Sin datos para el filtro seleccionado.</td></tr>'}</tbody></table>`;
+      }
+      function paintQrTable(list) {
+        document.getElementById('qrRows').innerHTML = list.map(item => `<tr><td>${esc(item.nombre)}<br><span class="small">${esc(item.correo || '')}</span></td><td>${esc(item.zona || '')}</td><td><img class="thumb" src="${item.qrUrl}" alt="QR ${esc(item.nombre)}"></td><td><a href="${item.formUrl}" target="_blank">Abrir enlace</a></td><td>${item.whatsappUrl ? `<a href="${item.whatsappUrl}" target="_blank">Enviar por WhatsApp</a>` : '<span class="small">Sin número</span>'}</td></tr>`).join('');
+      }
+      function sendMassive() {
+        const status = document.getElementById('sendStatus'); status.className = 'status'; status.style.display = 'block'; status.textContent = 'Enviando correos...';
+        google.script.run.withSuccessHandler(res => { status.className = 'status ok'; status.textContent = `Envío completado. Correos enviados: ${res.sent}`; }).withFailureHandler(err => { status.className = 'status err'; status.textContent = err.message || 'Error durante envío masivo.'; }).sendMassiveQrEmails();
+      }
+      function saveCsv() {
+        const csv = document.getElementById('csvInput').value;
+        const status = document.getElementById('csvStatus');
+        status.className = 'status'; status.style.display = 'block'; status.textContent = 'Guardando joyerías...';
+        google.script.run
+          .withSuccessHandler(res => {
+            status.className = 'status ok';
+            status.textContent = `Se cargaron ${res.total} joyerías. Recarga el panel para ver cambios.`;
+          })
+          .withFailureHandler(err => {
+            status.className = 'status err';
+            status.textContent = err.message || 'No se pudo guardar el CSV.';
+          })
+          .saveJoyeriasCsv(csv);
+      }
+      function esc(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+    </script>
+  </body>
+</html>
