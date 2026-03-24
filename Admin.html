@@ -129,8 +129,9 @@
 
     <script>
       const ADMIN_DATA = <?!= JSON.stringify(data) ?>;
+      const ADMIN_KEY = ADMIN_DATA.adminKey || '';
       document.addEventListener('DOMContentLoaded', () => {
-        if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px">No autorizado para ver este panel.</div>'; return; }
+        if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px"><h3>No autorizado</h3><p>Ingresa con un correo admin o usando una clave por URL: <code>?admin=1&key=TU_CLAVE</code>.</p></div>'; return; }
         initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); initTabs(); loadStores();
       });
       function initFilters() {
@@ -139,7 +140,7 @@
       }
       function reloadDashboard() {
         const filter = { month: document.getElementById('fltMonth').value, zone: document.getElementById('fltZone').value };
-        google.script.run.withSuccessHandler(paintDashboard).getDashboardData(filter);
+        google.script.run.withSuccessHandler(paintDashboard).getDashboardData(filter, ADMIN_KEY);
       }
       function paintDashboard(data) {
         document.getElementById('kpiTotal').textContent = data.total;
@@ -153,7 +154,7 @@
       }
       function sendMassive() {
         const status = document.getElementById('sendStatus'); status.className = 'status'; status.style.display = 'block'; status.textContent = 'Enviando correos...';
-        google.script.run.withSuccessHandler(res => { status.className = 'status ok'; status.textContent = `Envío completado. Correos enviados: ${res.sent}`; }).withFailureHandler(err => { status.className = 'status err'; status.textContent = err.message || 'Error durante envío masivo.'; }).sendMassiveQrEmails();
+        google.script.run.withSuccessHandler(res => { status.className = 'status ok'; status.textContent = `Envío completado. Correos enviados: ${res.sent}`; }).withFailureHandler(err => { status.className = 'status err'; status.textContent = err.message || 'Error durante envío masivo.'; }).sendMassiveQrEmails(ADMIN_KEY);
       }
       function initTabs() {
         showSection('compliance');
@@ -189,7 +190,7 @@
         google.script.run
           .withSuccessHandler(paintStores)
           .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo cargar el listado.', true))
-          .getJoyeriasAdminData(filter);
+          .getJoyeriasAdminData(filter, ADMIN_KEY);
       }
 
       function paintStores(data) {
@@ -243,7 +244,7 @@
             reloadDashboard();
           })
           .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo eliminar.', true))
-          .deleteJoyeria(id);
+          .deleteJoyeria(id, ADMIN_KEY);
       }
 
       function openEdit(encodedId) {
@@ -266,7 +267,7 @@
           document.getElementById('edCiudad').value = item.ciudad || '';
           document.getElementById('edZona').value = item.zona || '';
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }).getJoyeriasAdminData({ q: id });
+        }).getJoyeriasAdminData({ q: id }, ADMIN_KEY);
       }
 
       function saveStoreEdit() {
@@ -291,10 +292,10 @@
           .withFailureHandler(err => showStoreStatus(err.message || 'No se pudo guardar.', true));
 
         if (isCreating) {
-          runner.createJoyeria(payload);
+          runner.createJoyeria(payload, ADMIN_KEY);
           return;
         }
-        runner.updateJoyeria(payload);
+        runner.updateJoyeria(payload, ADMIN_KEY);
       }
 
       function cancelEdit() {

@@ -7,6 +7,7 @@ const CONFIG = {
   DRIVE_FOLDER_NAME: 'Inspecciones Limpieza y Desinfección',
   BRAND_LOGO_URL: 'https://drive.google.com/uc?export=view&id=REEMPLAZAR_ID_ARCHIVO_LOGO',
   JOYERIAS_STORE_KEY: 'JOYERIAS_JSON',
+  ADMIN_ACCESS_PASSWORD: 'Admin',
   ADMIN_EMAILS: [
     'sgamboa765@gmail.com',
     'deudaspresuntas.aynn@gmail.com',
@@ -81,12 +82,16 @@ function doGet(e) {
   const mode = (e && e.parameter && e.parameter.admin === '1') ? 'admin' : 'form';
 
   if (mode === 'admin') {
+    const adminKey = e && e.parameter ? String(e.parameter.key || '').trim() : '';
+    const isAdmin = hasAdminAccess_(adminKey);
+
     const template = HtmlService.createTemplateFromFile('Admin');
     template.data = {
-      isAdmin: isCurrentUserAdmin_(),
-      dashboard: getDashboardData_(),
-      qrCatalog: getQrCatalog_(),
-      joyerias: getJoyerias_(),
+      isAdmin: isAdmin,
+      adminKey: adminKey,
+      dashboard: isAdmin ? getDashboardData_() : { month: '', zone: '', zones: [], total: 0, registradas: 0, pendientes: 0, complianceByJoyeria: [] },
+      qrCatalog: isAdmin ? getQrCatalog_() : [],
+      joyerias: isAdmin ? getJoyerias_() : [],
       webAppUrl: ScriptApp.getService().getUrl() || '',
       logoUrl: CONFIG.BRAND_LOGO_URL
     };
@@ -140,6 +145,15 @@ function getUserRole(email) {
 }
 
 function isCurrentUserAdmin_() {
+  return hasAdminAccess_('');
+}
+
+function hasAdminAccess_(adminKey) {
+  const key = String(adminKey || '').trim();
+  if (CONFIG.ADMIN_ACCESS_PASSWORD && key && key === CONFIG.ADMIN_ACCESS_PASSWORD) {
+    return true;
+  }
+
   try {
     const email = Session.getActiveUser().getEmail() || '';
     return getUserRole(email) === 'admin';
@@ -270,7 +284,8 @@ function saveInspection(payload) {
 /**********************
  * DASHBOARD ADMIN
  **********************/
-function getDashboardData(filter) {
+function getDashboardData(filter, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
   return getDashboardData_(filter || {});
 }
 
@@ -338,8 +353,8 @@ function getQrCatalog_() {
   });
 }
 
-function saveJoyeriasCsv(csvText) {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function saveJoyeriasCsv(csvText, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
   if (!csvText || !csvText.trim()) throw new Error('Debes enviar el CSV.');
 
   const parsed = Utilities.parseCsv(csvText.trim());
@@ -375,13 +390,13 @@ function saveJoyeriasCsv(csvText) {
   return { ok: true, total: data.length };
 }
 
-function getQrCatalog() {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function getQrCatalog(adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
   return getQrCatalog_();
 }
 
-function getJoyeriasAdminData(filter) {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function getJoyeriasAdminData(filter, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
 
   const q = (filter && filter.q ? String(filter.q) : '').toLowerCase().trim();
   const zone = (filter && filter.zone ? String(filter.zone) : '').trim();
@@ -405,8 +420,8 @@ function getJoyeriasAdminData(filter) {
   };
 }
 
-function updateJoyeria(payload) {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function updateJoyeria(payload, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
   if (!payload || !payload.id) throw new Error('ID de joyería requerido.');
 
   const stores = getJoyerias_();
@@ -434,8 +449,8 @@ function updateJoyeria(payload) {
   return { ok: true, joyeria: updated };
 }
 
-function createJoyeria(payload) {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function createJoyeria(payload, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
 
   const nombre = String((payload && payload.nombre) || '').trim();
   const inputId = String((payload && payload.id) || '').trim();
@@ -464,8 +479,8 @@ function createJoyeria(payload) {
   return { ok: true, joyeria: newStore };
 }
 
-function deleteJoyeria(joyeriaId) {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function deleteJoyeria(joyeriaId, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
 
   const id = String(joyeriaId || '').trim();
   if (!id) throw new Error('ID de joyería requerido para eliminar.');
@@ -478,8 +493,8 @@ function deleteJoyeria(joyeriaId) {
   return { ok: true, deletedId: id };
 }
 
-function sendMassiveQrEmails() {
-  if (!isCurrentUserAdmin_()) throw new Error('No autorizado.');
+function sendMassiveQrEmails(adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
 
   const catalog = getQrCatalog_();
   let sent = 0;

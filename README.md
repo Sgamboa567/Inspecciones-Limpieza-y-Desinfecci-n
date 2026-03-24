@@ -62,8 +62,11 @@ Se guarda una fila por cada envío con este orden:
 - Formulario general: `https://.../exec`
 - Formulario por QR de joyería: `https://.../exec?s=med-centro`
 - Panel admin: `https://.../exec?admin=1`
+- Panel admin con clave: `https://.../exec?admin=1&key=TU_CLAVE`
 
 > Apps Script abre el formulario por defecto (Index). Para entrar al panel administrativo debes agregar `?admin=1` a la URL desplegada.
+
+> Si el correo no se detecta como admin por políticas del dominio, usa la clave definida en `CONFIG.ADMIN_ACCESS_PASSWORD` con `?admin=1&key=...`.
 
 ## Flujo recomendado de operación
 
