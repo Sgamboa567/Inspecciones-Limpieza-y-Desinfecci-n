@@ -7,7 +7,7 @@ const CONFIG = {
   DRIVE_FOLDER_NAME: 'Inspecciones Limpieza y Desinfección',
   BRAND_LOGO_URL: 'https://drive.google.com/uc?export=view&id=REEMPLAZAR_ID_ARCHIVO_LOGO',
   JOYERIAS_STORE_KEY: 'JOYERIAS_JSON',
-  ADMIN_ACCESS_PASSWORD: 'CAMBIAR_ESTA_CLAVE_SEGURA',
+  ADMIN_ACCESS_PASSWORD: 'Admin',
   ADMIN_EMAILS: [
     'sgamboa765@gmail.com',
     'deudaspresuntas.aynn@gmail.com',
