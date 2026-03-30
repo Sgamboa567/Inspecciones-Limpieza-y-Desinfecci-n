@@ -7,6 +7,7 @@ const CONFIG = {
   DRIVE_FOLDER_NAME: 'Inspecciones Limpieza y Desinfección',
   BRAND_LOGO_URL: 'https://drive.google.com/uc?export=view&id=REEMPLAZAR_ID_ARCHIVO_LOGO',
   JOYERIAS_STORE_KEY: 'JOYERIAS_JSON',
+  FORM_SETTINGS_STORE_KEY: 'FORM_SETTINGS_JSON',
   ADMIN_ACCESS_PASSWORD: 'Admin',
   ADMIN_EMAILS: [
     'sgamboa765@gmail.com',
@@ -93,7 +94,8 @@ function doGet(e) {
       qrCatalog: isAdmin ? getQrCatalog_() : [],
       joyerias: isAdmin ? getJoyerias_() : [],
       webAppUrl: ScriptApp.getService().getUrl() || '',
-      logoUrl: CONFIG.BRAND_LOGO_URL
+      logoUrl: CONFIG.BRAND_LOGO_URL,
+      formConfig: isAdmin ? getFormSettings_() : getDefaultFormSettings_()
     };
     return template.evaluate().setTitle('Panel Admin SST');
   }
@@ -104,8 +106,7 @@ function doGet(e) {
   const template = HtmlService.createTemplateFromFile('Index');
   template.data = {
     joyerias: getJoyerias_(),
-    areas: CONFIG.AREAS,
-    checklist: CONFIG.CHECKLIST_ITEMS,
+    ...getFormSettings_(),
     selectedJoyeriaId: joyeria ? joyeria.id : '',
     selectedJoyeriaName: joyeria ? joyeria.nombre : '',
     selectedJoyeriaEmail: joyeria ? joyeria.correo : '',
@@ -121,8 +122,7 @@ function include(filename) {
 function getFormData_() {
   return {
     joyerias: getJoyerias_(),
-    areas: CONFIG.AREAS,
-    checklist: CONFIG.CHECKLIST_ITEMS
+    ...getFormSettings_()
   };
 }
 
@@ -179,6 +179,77 @@ function getJoyerias_() {
   } catch (err) {
     return CONFIG.JOYERIAS;
   }
+}
+
+
+
+function getDefaultFormSettings_() {
+  return {
+    formTitle: 'Inspección de Limpieza y Desinfección',
+    formSubtitle: 'Completa el formulario y guarda el registro con evidencia y firma.',
+    areasTitle: 'ÁREA(S) limpiadas',
+    checklistTitle: 'Checklist SST',
+    statusOptions: ['Cumple', 'No cumple', 'No aplica'],
+    areas: CONFIG.AREAS,
+    checklist: CONFIG.CHECKLIST_ITEMS
+  };
+}
+
+function getFormSettings_() {
+  const defaults = getDefaultFormSettings_();
+  const raw = PropertiesService.getScriptProperties().getProperty(CONFIG.FORM_SETTINGS_STORE_KEY);
+  if (!raw) return defaults;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const normalize = (list, fallback) => (Array.isArray(list) ? list : fallback)
+      .map(item => String(item || '').trim())
+      .filter(Boolean);
+
+    return {
+      formTitle: String(parsed.formTitle || defaults.formTitle).trim() || defaults.formTitle,
+      formSubtitle: String(parsed.formSubtitle || defaults.formSubtitle).trim() || defaults.formSubtitle,
+      areasTitle: String(parsed.areasTitle || defaults.areasTitle).trim() || defaults.areasTitle,
+      checklistTitle: String(parsed.checklistTitle || defaults.checklistTitle).trim() || defaults.checklistTitle,
+      statusOptions: normalize(parsed.statusOptions, defaults.statusOptions),
+      areas: normalize(parsed.areas, defaults.areas),
+      checklist: normalize(parsed.checklist, defaults.checklist)
+    };
+  } catch (err) {
+    return defaults;
+  }
+}
+
+function saveFormSettings(payload, adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
+  if (!payload) throw new Error('No llegaron datos para guardar.');
+
+  const defaults = getDefaultFormSettings_();
+  const normalize = (list) => (Array.isArray(list) ? list : [])
+    .map(item => String(item || '').trim())
+    .filter(Boolean);
+
+  const settings = {
+    formTitle: String(payload.formTitle || '').trim() || defaults.formTitle,
+    formSubtitle: String(payload.formSubtitle || '').trim() || defaults.formSubtitle,
+    areasTitle: String(payload.areasTitle || '').trim() || defaults.areasTitle,
+    checklistTitle: String(payload.checklistTitle || '').trim() || defaults.checklistTitle,
+    statusOptions: normalize(payload.statusOptions),
+    areas: normalize(payload.areas),
+    checklist: normalize(payload.checklist)
+  };
+
+  if (!settings.statusOptions.length) throw new Error('Debes incluir al menos una opción de respuesta.');
+  if (!settings.areas.length) throw new Error('Debes incluir al menos un área.');
+  if (!settings.checklist.length) throw new Error('Debes incluir al menos un ítem de checklist.');
+
+  PropertiesService.getScriptProperties().setProperty(CONFIG.FORM_SETTINGS_STORE_KEY, JSON.stringify(settings));
+  return { ok: true, settings };
+}
+
+function getFormSettings(adminKey) {
+  if (!hasAdminAccess_(adminKey)) throw new Error('No autorizado.');
+  return getFormSettings_();
 }
 
 function getResponsablesByJoyeria(joyeriaId) {
@@ -672,7 +743,6 @@ function escapeHtml_(text) {
 function probarDatos() {
   Logger.log(JSON.stringify({
     joyerias: CONFIG.JOYERIAS,
-    areas: CONFIG.AREAS,
-    checklist: CONFIG.CHECKLIST_ITEMS
+    ...getFormSettings_()
   }, null, 2));
 }

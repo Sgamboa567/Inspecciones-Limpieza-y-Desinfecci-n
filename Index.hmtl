@@ -50,8 +50,8 @@
         <div class="brand">
           <img src="<?= data.logoUrl ?>" alt="Logo OROEXPRESS" onerror="this.style.display='none'">
         </div>
-        <h1>Inspección de Limpieza y Desinfección</h1>
-        <p class="small">Completa el formulario y guarda el registro con evidencia y firma.</p>
+        <h1 id="formTitle"></h1>
+        <p class="small" id="formSubtitle"></p>
 
         <div class="grid">
           <div class="field">
@@ -78,12 +78,12 @@
         </div>
 
         <div class="field">
-          <label>ÁREA(S) limpiadas</label>
+          <label id="areasTitle"></label>
           <div id="areasContainer" class="box"></div>
         </div>
 
         <div class="field">
-          <label>Checklist SST</label>
+          <label id="checklistTitle"></label>
           <div id="checklistContainer"></div>
         </div>
 
@@ -112,7 +112,15 @@
     <script>
       const APP_DATA = <?!= JSON.stringify(data) ?>;
       let signatureCanvas, ctx, drawing = false;
-      document.addEventListener('DOMContentLoaded', () => { setToday(); loadJoyeriaOptions(); loadAreas(); loadChecklist(); setupSignatureCanvas(); setupPhotoPreview(); applySelectedJoyeria(); });
+      document.addEventListener('DOMContentLoaded', () => { setLabels(); setToday(); loadJoyeriaOptions(); loadAreas(); loadChecklist(); setupSignatureCanvas(); setupPhotoPreview(); applySelectedJoyeria(); });
+
+      function setLabels() {
+        document.getElementById('formTitle').textContent = APP_DATA.formTitle || 'Inspección de Limpieza y Desinfección';
+        document.getElementById('formSubtitle').textContent = APP_DATA.formSubtitle || '';
+        document.getElementById('areasTitle').textContent = APP_DATA.areasTitle || 'ÁREA(S) limpiadas';
+        document.getElementById('checklistTitle').textContent = APP_DATA.checklistTitle || 'Checklist SST';
+      }
+
       function setToday() { document.getElementById('fechaInspeccion').value = new Date().toISOString().split('T')[0]; }
       function loadJoyeriaOptions() {
         const joyeria = document.getElementById('joyeria');
@@ -135,7 +143,11 @@
       }
       function loadAreas() { document.getElementById('areasContainer').innerHTML = APP_DATA.areas.map(a => `<label class="chip"><input type="checkbox" name="areaItem" value="${escapeHtml(a)}"> ${escapeHtml(a)}</label>`).join(''); }
       function loadChecklist() {
-        document.getElementById('checklistContainer').innerHTML = APP_DATA.checklist.map((item, index) => `<div class="checklist-item"><div><b>${index + 1}. ${escapeHtml(item)}</b></div><div style="margin-top:8px"><label class="chip"><input type="radio" name="check_${index}" value="Cumple"> Cumple</label><label class="chip"><input type="radio" name="check_${index}" value="No cumple"> No cumple</label><label class="chip"><input type="radio" name="check_${index}" value="No aplica"> No aplica</label></div></div>`).join('');
+        const statusOptions = (APP_DATA.statusOptions || []).length ? APP_DATA.statusOptions : ['Cumple', 'No cumple', 'No aplica'];
+        document.getElementById('checklistContainer').innerHTML = APP_DATA.checklist.map((item, index) => {
+          const radios = statusOptions.map(option => `<label class="chip"><input type="radio" name="check_${index}" value="${escapeHtml(option)}"> ${escapeHtml(option)}</label>`).join('');
+          return `<div class="checklist-item"><div><b>${index + 1}. ${escapeHtml(item)}</b></div><div style="margin-top:8px">${radios}</div></div>`;
+        }).join('');
       }
       function setupPhotoPreview() { document.getElementById('photos').addEventListener('change', function() { const files = Array.from(this.files || []); document.getElementById('photoPreview').innerHTML = files.length ? `${files.length} archivo(s):<br>${files.map(f => '• ' + f.name).join('<br>')}` : ''; }); }
       function setupSignatureCanvas() {

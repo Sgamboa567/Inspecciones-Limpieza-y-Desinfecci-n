@@ -27,6 +27,10 @@
       .icon-btn.danger{border-color:#d5a4a4;color:#9e1c1c}
       .editor-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
       .editor-grid .full{grid-column:1/-1}
+
+      .list-editor{display:grid;gap:8px}
+      .list-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+      .list-row input{margin:0}
       .muted{color:var(--muted)}
       .tabs{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
       .tab-btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;font-weight:600}
@@ -68,6 +72,7 @@
           <button class="tab-btn active" data-tab="compliance" onclick="showSection('compliance')">Cumplimiento</button>
           <button class="tab-btn" data-tab="qr" onclick="showSection('qr')">QR y envíos</button>
           <button class="tab-btn" data-tab="stores" onclick="showSection('stores')">Joyerías</button>
+          <button class="tab-btn" data-tab="form" onclick="showSection('form')">Formulario</button>
         </div>
       </div>
 
@@ -107,6 +112,34 @@
         <div id="storeStatus" class="status"></div>
       </div>
 
+
+      <div class="card admin-section" id="section-form">
+        <h2>Editor del formulario</h2>
+        <p class="small">Personaliza títulos, opciones de respuesta, áreas y checklist desde este panel (tipo Google Forms).</p>
+        <div class="editor-grid">
+          <div class="full"><label>Título del formulario</label><input id="frmTitle"></div>
+          <div class="full"><label>Subtítulo del formulario</label><input id="frmSubtitle"></div>
+          <div><label>Título sección Áreas</label><input id="frmAreasTitle"></div>
+          <div><label>Título sección Checklist</label><input id="frmChecklistTitle"></div>
+          <div class="full"><label>Opciones de respuesta (una por línea)</label><textarea id="frmStatusOptions" rows="4"></textarea></div>
+          <div class="full">
+            <label>Áreas</label>
+            <div id="areasList" class="list-editor"></div>
+            <div style="margin-top:8px"><button class="btn btn-ghost" onclick="addListItem('areasList')">+ Agregar área</button></div>
+          </div>
+          <div class="full">
+            <label>Checklist</label>
+            <div id="checklistList" class="list-editor"></div>
+            <div style="margin-top:8px"><button class="btn btn-ghost" onclick="addListItem('checklistList')">+ Agregar ítem</button></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="saveFormConfig()">Guardar configuración del formulario</button>
+          <button class="btn btn-ghost" onclick="loadFormConfig()">Recargar</button>
+        </div>
+        <div id="formStatus" class="status"></div>
+      </div>
+
       <div class="card admin-section" id="editCard" style="display:none">
         <h2>Editar joyería</h2>
         <div class="editor-grid">
@@ -132,7 +165,7 @@
       const ADMIN_KEY = ADMIN_DATA.adminKey || '';
       document.addEventListener('DOMContentLoaded', () => {
         if (!ADMIN_DATA.isAdmin) { document.body.innerHTML = '<div style="padding:20px"><h3>No autorizado</h3><p>Ingresa con un correo admin o usando una clave por URL: <code>?admin=1&key=TU_CLAVE</code>.</p></div>'; return; }
-        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); initTabs(); loadStores();
+        initFilters(); paintDashboard(ADMIN_DATA.dashboard); paintQrTable(ADMIN_DATA.qrCatalog || []); initTabs(); loadStores(); loadFormConfig();
       });
       function initFilters() {
         document.getElementById('fltMonth').value = ADMIN_DATA.dashboard.month;
@@ -161,7 +194,7 @@
       }
 
       function showSection(section) {
-        const valid = ['compliance', 'qr', 'stores'];
+        const valid = ['compliance', 'qr', 'stores', 'form'];
         const selected = valid.includes(section) ? section : 'compliance';
 
         document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
@@ -314,6 +347,88 @@
 
       function showStoreStatus(message, isError) {
         const status = document.getElementById('storeStatus');
+        status.className = 'status ' + (isError ? 'err' : 'ok');
+        status.textContent = message;
+      }
+
+
+      function loadFormConfig() {
+        const fill = cfg => {
+          document.getElementById('frmTitle').value = cfg.formTitle || '';
+          document.getElementById('frmSubtitle').value = cfg.formSubtitle || '';
+          document.getElementById('frmAreasTitle').value = cfg.areasTitle || '';
+          document.getElementById('frmChecklistTitle').value = cfg.checklistTitle || '';
+          document.getElementById('frmStatusOptions').value = (cfg.statusOptions || []).join('\n');
+          renderListEditor('areasList', cfg.areas || []);
+          renderListEditor('checklistList', cfg.checklist || []);
+        };
+
+        if (ADMIN_DATA.formConfig) {
+          fill(ADMIN_DATA.formConfig);
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(fill)
+          .withFailureHandler(err => showFormStatus(err.message || 'No se pudo cargar la configuración.', true))
+          .getFormSettings(ADMIN_KEY);
+      }
+
+      function renderListEditor(containerId, items) {
+        const container = document.getElementById(containerId);
+        const list = (items || []).length ? items : [''];
+        container.innerHTML = list.map(item => `
+          <div class="list-row">
+            <input type="text" value="${esc(item || '')}" data-list-item>
+            <button class="icon-btn danger" onclick="removeListItem(this)" title="Eliminar">🗑️</button>
+          </div>
+        `).join('');
+      }
+
+      function addListItem(containerId) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        row.innerHTML = '<input type="text" value="" data-list-item><button class="icon-btn danger" onclick="removeListItem(this)" title="Eliminar">🗑️</button>';
+        container.appendChild(row);
+      }
+
+      function removeListItem(btn) {
+        const row = btn.closest('.list-row');
+        if (!row) return;
+        const parent = row.parentElement;
+        row.remove();
+        if (!parent.querySelector('.list-row')) addListItem(parent.id);
+      }
+
+      function getListValues(containerId) {
+        return Array.from(document.querySelectorAll(`#${containerId} [data-list-item]`))
+          .map(el => (el.value || '').trim())
+          .filter(Boolean);
+      }
+
+      function saveFormConfig() {
+        const payload = {
+          formTitle: document.getElementById('frmTitle').value,
+          formSubtitle: document.getElementById('frmSubtitle').value,
+          areasTitle: document.getElementById('frmAreasTitle').value,
+          checklistTitle: document.getElementById('frmChecklistTitle').value,
+          statusOptions: (document.getElementById('frmStatusOptions').value || '').split('\n').map(v => v.trim()).filter(Boolean),
+          areas: getListValues('areasList'),
+          checklist: getListValues('checklistList')
+        };
+
+        google.script.run
+          .withSuccessHandler(() => {
+            showFormStatus('Configuración guardada correctamente.', false);
+            ADMIN_DATA.formConfig = payload;
+          })
+          .withFailureHandler(err => showFormStatus(err.message || 'No se pudo guardar la configuración.', true))
+          .saveFormSettings(payload, ADMIN_KEY);
+      }
+
+      function showFormStatus(message, isError) {
+        const status = document.getElementById('formStatus');
         status.className = 'status ' + (isError ? 'err' : 'ok');
         status.textContent = message;
       }
